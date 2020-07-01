@@ -14,7 +14,7 @@ struct totlines {
     struct line *plines;
 };
 
-struct totlines lines;
+struct totlines lines = {0, NULL};
 FILE *fptr;
 
 int openFile(char *filename) {
@@ -27,7 +27,7 @@ void addLine(int len, char *newline) {
     printf("%d\n%s", len, newline);
     lines.size = lines.size + 1;
     lines.plines = (struct line *) 
-                realloc(lines.plines, lines.size * sizeof(struct line));
+            realloc(lines.plines, lines.size * sizeof(struct line));
 
     struct line nline;
     nline.len = len;
@@ -38,18 +38,23 @@ void addLine(int len, char *newline) {
 }
 
 int firstPass(void) {
-    lines.size = 0;
-    lines.plines = NULL;
     size_t linecap = 0;
     char *newline = NULL;
     int linelen;
     while ((linelen = getline(&newline, &linecap, fptr)) != -1) {
-        if (linelen != 0) {                //remove empty lines
-            int i = 0;
-            while (newline[i] == ' ') i++; //remove white space
-            if (newline[i] != ';')         //remove comments
-                addLine(linelen - i, (newline + i));
+        int i = 0;
+        while (newline[i] == ' ') i++;  //remove white space
+                                        //remove comments and empty lines
+        if (newline[i] != ';' && newline[i] != '\n' 
+                && newline[i] != '\r' && newline[i] != '\0') {
+                                        //remove newline
+            if (newline[linelen - 2] == '\n' || newline[linelen - 2] == '\r') {
+                newline[linelen - 2] = '\0';
+                linelen--;
+            }
+            addLine(linelen - i, (newline + i));
         }
+        free(newline);
     }
 
     free(newline);
@@ -71,7 +76,7 @@ int main(int argc, char *argv[]) {
 
     int i = 0;
     while (i < lines.size) {
-        printf("%s", (lines.plines + i)->chars);
+        printf("\n%s\n%d", (lines.plines + i)->chars, (lines.plines + i)->len);
         i++;
     }
 
