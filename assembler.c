@@ -1,3 +1,4 @@
+#define  _GNU_SOURCE
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -25,19 +26,15 @@ int openFile(char *filename) {
 void addLine(int len, char *newline) {
     printf("%d\n%s", len, newline);
     lines.size = lines.size + 1;
-    if (lines.plines != NULL) {
-        lines.plines = (struct line *) 
+    lines.plines = (struct line *) 
                 realloc(lines.plines, lines.size * sizeof(struct line));
-    } else {
-        lines.plines = (struct line *) malloc(sizeof(struct line));
-    }
 
     struct line nline;
     nline.len = len;
     nline.chars = malloc(len);
     memcpy(nline.chars, newline, len);
 
-    *(lines.plines + lines.size - 1) = nline;
+    lines.plines[lines.size - 1] = nline;
 }
 
 int firstPass(void) {
@@ -74,7 +71,7 @@ int main(int argc, char *argv[]) {
 
     int i = 0;
     while (i < lines.size) {
-        printf("\nline: %s", (*(lines.plines + i)).chars);
+        printf("%s", (lines.plines + i)->chars);
         i++;
     }
 
