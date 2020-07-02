@@ -24,7 +24,6 @@ int openFile(char *filename) {
 }
 
 void addLine(int len, char *newline) {
-    printf("%d\n%s", len, newline);
     lines.size = lines.size + 1;
     lines.plines = (struct line *) 
             realloc(lines.plines, lines.size * sizeof(struct line));
@@ -37,13 +36,13 @@ void addLine(int len, char *newline) {
     lines.plines[lines.size - 1] = nline;
 }
 
-int parseFile(void) {
+void parseFile(void) {
     size_t linecap = 0;
     char *newline = NULL;
     int linelen;
     while ((linelen = getline(&newline, &linecap, fptr)) != -1) {
         int i = 0;
-        while (newline[i] == ' ') i++;  //remove white space
+        while (newline[i] == ' ' || newline[i] == '\t') i++;  //remove white space
                                         //remove comments and empty lines
         if (newline[i] != ';' && newline[i] != '\n' 
                 && newline[i] != '\r' && newline[i] != '\0') {
@@ -58,8 +57,9 @@ int parseFile(void) {
     }
 
     free(newline);
-    return 0;
 }
+
+int firstPass();
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -74,11 +74,7 @@ int main(int argc, char *argv[]) {
 
     parseFile();
 
-    int i = 0;
-    while (i < lines.size) {
-        printf("\n%s\n%d", (lines.plines + i)->chars, (lines.plines + i)->len);
-        i++;
-    }
+    if (firstPass()) return 1;
 
     return 0;
 }
