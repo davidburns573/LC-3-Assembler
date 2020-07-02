@@ -37,7 +37,7 @@ void addLine(int len, char *newline) {
     lines.plines[lines.size - 1] = nline;
 }
 
-int firstPass(void) {
+int parseFile(void) {
     size_t linecap = 0;
     char *newline = NULL;
     int linelen;
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    firstPass();
+    parseFile();
 
     int i = 0;
     while (i < lines.size) {
