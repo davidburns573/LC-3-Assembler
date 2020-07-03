@@ -6,6 +6,12 @@
 
 /***constants***/
 #define ORIG ".orig"
+#define INSTRSIZE 17
+const char *INSTRUCTIONS[] = {"ADD","AND","BR","BRN","BRP","BRZ",
+                              "BRNZ","BRNP","BRZP","BRNZP","GETC","HALT",
+                              "IN","JMP","JSR","JSRR","LD","LDI",
+                              "LDR","LEA","NOT","OUT","PUTS","RET",
+                              "RTI","ST","STI","STR","TRAP"};
 
 /***structs***/
 struct line {
@@ -18,10 +24,22 @@ struct totlines {
     struct line *plines;
 };
 
+struct label {
+    char *name;
+    int memlocation;
+};
+
+struct labeltable {
+    int size;
+    struct label *plabel;
+};
+
 /***global data***/
 struct totlines lines = {0, NULL};
+struct labeltable labels = {0, NULL}; 
 FILE *fptr;
 char conversionerror = 0; //will be set to anything but zero if conversion error
+
 
 int openFile(char *filename) {
     fptr = fopen(filename, "r");
@@ -29,6 +47,9 @@ int openFile(char *filename) {
     return 0;
 }
 
+/**
+ * Allocates space for newline and adds it to lines
+**/
 void addLine(int len, char *newline) {
     lines.size = lines.size + 1;
     lines.plines = (struct line *) 
@@ -42,6 +63,10 @@ void addLine(int len, char *newline) {
     lines.plines[lines.size - 1] = nline;
 }
 
+/**
+ * Removes all empty lines and comments
+ * Puts file in more readable format using the line struct
+**/
 void parseFile(void) {
     size_t linecap = 0;
     char *newline = NULL;
@@ -59,23 +84,22 @@ void parseFile(void) {
             }
             addLine(linelen - i, (newline + i));
         }
-        free(newline);
     }
 
     free(newline);
 }
 
 /***recursive pow function (may not use)***/
-int pow(int a, int b) {
+int powfunc(int a, int b) {
     if (b == 0) {
         return 1;
     } else if (b == 1) {
         return a;
     }
     if (b & 1) {
-        return a * pow(a, b - 1);
+        return a * powfunc(a, b - 1);
     } else {
-        int i = pow(a, b / 2);
+        int i = powfunc(a, b / 2);
         return i * i;
     }
 }
@@ -171,11 +195,11 @@ int decStrToInt(char *f) {
     return 0;
 }
 
-/***
+/**
  * Checks for an initial .orig statement
  * @param f firstline of lines
  * @return 0 for success, -1 for error
-***/
+**/
 int checkOrig(char *f) {
     char *orig = ORIG;
     while (*orig != '\0') {
@@ -212,12 +236,56 @@ int checkOrig(char *f) {
     return codestart;
 }
 
+/**
+ * Checks if given line is a label
+**/
+int checkForLabel(char *f) {
+    char *p = f;
+    while (*p != '\0' && *p != ' ' && *p != '\t') { //checks first word, only letters
+        if ((*p & ~(1 << 5)) < 'A' || (*p & ~(1 << 5)) > 'Z') return 0;
+        p++;
+    }
+    for (int i = 0; i < INSTRSIZE; i++) {
+        char *instr = INSTRUCTIONS[i];
+        char *x = f;
+        while (*instr != '\0' && (*instr == (*x & ~(1 << 5)))) {
+            if ((*x & ~(1 << 5)) < 'A' || (*x & ~(1 << 5)) > 'Z') return 0; //remove PSEUDO-OPs
+            instr++; x++;
+        }
+        if (*instr == '\0' && (*x == ' ' || *x == '\t')) return 0; //return 0 for not label
+        char up = (*f & ~(1 << 5));
+        if (up > 'A' && up < 'Z' && up < *INSTRUCTIONS[i]) return 1; //return 1 for label
+    }
+    return 1;
+}
+
+/**
+ * Adds label to label table
+**/
+void addLabel(char *f) {
+
+}
+
+/**
+ * Create label table with locations in code 
+**/
 int firstPass() {
-    char *firstLine = lines.plines->chars;
+    char *first = lines.plines->chars;
     int orig = 0;
-    if ((orig = checkOrig(firstLine)) == -1) return -1;
+    if ((orig = checkOrig(first)) == -1) return -1;
 
     printf("code block starts at x%X\n", orig);
+
+    struct line *curline = lines.plines;
+    curline++;
+    int inc = 1;
+    while (inc < lines.size) {
+        if (checkForLabel(curline->chars)) {
+            addLabel(curline->chars);
+            printf("%s\n", curline->chars);
+        }
+        inc++; curline++;
+    }
     return 0;
 }
 
