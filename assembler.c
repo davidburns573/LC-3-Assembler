@@ -6,7 +6,7 @@
 
 /***constants***/
 #define ORIG ".orig"
-#define INSTRSIZE 17
+#define INSTRSIZE 29
 const char *INSTRUCTIONS[] = {"ADD","AND","BR","BRN","BRP","BRZ",
                               "BRNZ","BRNP","BRZP","BRNZP","GETC","HALT",
                               "IN","JMP","JSR","JSRR","LD","LDI",
@@ -59,7 +59,6 @@ void addLine(int len, char *newline) {
     nline.len = len;
     nline.chars = malloc(len);
     memcpy(nline.chars, newline, len);
-
     lines.plines[lines.size - 1] = nline;
 }
 
@@ -262,8 +261,24 @@ int checkForLabel(char *f) {
 /**
  * Adds label to label table
 **/
-void addLabel(char *f) {
+void addLabel(char *f, int location) {
+    char *c = f;
+    int numLetters = 0;
+    while (*c != '\0' && *c != ' ' && *c != '\t') {
+        c++; numLetters++;
+    }
+    c = (char *) malloc(numLetters + 1);
+    memcpy(c, f, numLetters);
+    c[numLetters] = '\0';
 
+    struct label nlabel;
+    nlabel.memlocation = location;
+    nlabel.name = c;
+    
+    labels.size = labels.size + 1;
+    labels.plabel = (struct label *) realloc(labels.plabel, 
+                        labels.size * sizeof(struct label));
+    labels.plabel[labels.size - 1] = nlabel;
 }
 
 /**
@@ -281,8 +296,7 @@ int firstPass() {
     int inc = 1;
     while (inc < lines.size) {
         if (checkForLabel(curline->chars)) {
-            addLabel(curline->chars);
-            printf("%s\n", curline->chars);
+            addLabel(curline->chars, inc + orig - 1);
         }
         inc++; curline++;
     }
@@ -303,6 +317,10 @@ int main(int argc, char *argv[]) {
     parseFile();
 
     if (firstPass() == -1) return 1;
+
+    for (int i = 0; i < labels.size; i++) {
+        printf("loc: %X name: %s\n", (labels.plabel + i)->memlocation,(labels.plabel + i)->name);
+    }
 
 
     return 0;
