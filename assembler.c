@@ -209,12 +209,15 @@ int checkOrig(char *f) {
         printf(".orig not a valid number");
         return -1;
     }
-    return 0;
+    return codestart;
 }
 
 int firstPass() {
     char *firstLine = lines.plines->chars;
+    int orig = 0;
+    if ((orig = checkOrig(firstLine)) == -1) return -1;
 
+    printf("code block starts at x%X\n", orig);
     return 0;
 }
 
@@ -228,8 +231,6 @@ int main(int argc, char *argv[]) {
         printf("Error opening file"); 
         return 1;
     }
-
-    printf("%d", decStrToInt("12296734"));
 
     parseFile();
 
