@@ -259,6 +259,18 @@ int checkForLabel(char *f) {
 }
 
 /**
+ * frees label table
+**/
+void freeLabelTable() {
+    for (int i = 0; i < labels.size; i++) {
+        free((labels.plabel + i)->name);
+    }
+    free(labels.plabel);
+    labels.plabel = NULL;
+    labels.size = 0;
+}
+
+/**
  * Adds label to label table
 **/
 void addLabel(char *f, int location) {
@@ -322,6 +334,6 @@ int main(int argc, char *argv[]) {
         printf("loc: %X name: %s\n", (labels.plabel + i)->memlocation,(labels.plabel + i)->name);
     }
 
-
+    freeLabelTable();
     return 0;
 }
