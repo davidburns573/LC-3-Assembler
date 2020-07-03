@@ -6,6 +6,7 @@
 
 /***constants***/
 #define ORIG ".orig"
+#define END ".end"
 #define INSTRSIZE 29
 const char *INSTRUCTIONS[] = {"ADD","AND","BR","BRN","BRP","BRZ",
                               "BRNZ","BRNP","BRZP","BRNZP","GETC","HALT",
@@ -195,21 +196,20 @@ int decStrToInt(char *f) {
 }
 
 /**
- * Checks for an initial .orig statement
- * @param f firstline of lines
- * @return 0 for success, -1 for error
+ * Checks for a .orig statement
+ * @param f a line
+ * @return location of orig, -1 if malformed, -2 if not there
 **/
 int checkOrig(char *f) {
     char *orig = ORIG;
     while (*orig != '\0') {
         if (*f != *orig) {
-            printf("no .orig statement");
-            return -1;
+            return -2;
         }
         orig++; f++;
     }   //ensure space between .orig and number
     if (*f != ' ') {
-        printf("malformed .orig statement"); 
+        printf("malformed .orig statement\n"); 
         return -1;
     }
 
@@ -229,10 +229,32 @@ int checkOrig(char *f) {
     }
 
     if (conversionerror) {
-        printf(".orig not a valid number");
+        printf(".orig not a valid number\n");
         return -1;
-    }
+    } else if (codestart < 0) return -1;
     return codestart;
+}
+
+/**
+ * Checks for a .end statement
+ * @param f a line
+ * @return 0 if normal, -1 if malformed, -2 if not there
+**/
+int checkEnd(char *f) {
+    char *end = END;
+    while (*end != '\0') {
+        if (*f != *end) {
+            return -2;
+        }
+        end++; f++;
+    }
+    while (*f != '\0') {
+        if (*f != ' ' && *f != '\t') {
+            printf("malformed .end statement\n");
+            return -1;
+        }
+    }
+    return 0;
 }
 
 /**
@@ -261,7 +283,7 @@ int checkForLabel(char *f) {
 /**
  * frees label table
 **/
-void freeLabelTable() {
+void freeLabelTable(void) {
     for (int i = 0; i < labels.size; i++) {
         free((labels.plabel + i)->name);
     }
@@ -296,33 +318,72 @@ void addLabel(char *f, int location) {
 /**
  * Create label table with locations in code 
 **/
-int firstPass() {
+int firstPass(void) {
     char *first = lines.plines->chars;
-    int orig = 0;
-    if ((orig = checkOrig(first)) == -1) return -1;
-
-    printf("code block starts at x%X\n", orig);
+    int orig = checkOrig(first); //-1 if missing, -2 if malformed
+    if (orig == -2) {
+        printf("Missing .orig statement\n");
+        return -1;
+    } else if (orig == -1) return -1;
 
     struct line *curline = lines.plines;
     curline++;
-    int inc = 1;
-    while (inc < lines.size) {
+    int inc = 0;
+    int end = lines.size - 1;
+    while (inc < end - 1) {
+        int checkend = 0;
+        if ((checkend = checkEnd(curline->chars)) == 0) {    //.end is there
+            orig = -1;
+            goto NEXT;
+        } else if (checkend == -1) return -1; //.end is malformed
+        int chOrig = 0;
+
+        if ((chOrig = checkOrig(curline->chars)) >= 0) {
+            if (orig == -1) {
+                end = end - inc;
+                inc = 0;
+                orig = chOrig - 1;
+                goto NEXT;
+            } else {
+                printf(".orig statement before .end statement");
+                return -1;
+            }
+        } else if (chOrig == -2 && orig == -1) {
+            printf("Missing .orig statement\n");
+            return -1; 
+        } else if (chOrig == -1) return -1;
+
         if (checkForLabel(curline->chars)) {
-            addLabel(curline->chars, inc + orig - 1);
+            addLabel(curline->chars, inc + orig);
         }
+        NEXT:
         inc++; curline++;
     }
+
+    int checkFinalEnd = 0;
+    if ((checkFinalEnd = checkEnd(curline->chars)) == -2) {
+        printf("Missing .end statement\n");
+        return -1;
+    } else if (checkFinalEnd == -1) return -1;
+
+    return 0;
+}
+
+/**
+ * Convert instructions into machine code
+**/
+int secondPass(void) {
     return 0;
 }
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("Need file to assemble"); 
+        printf("Need file to assemble\n"); 
         return 1;
     }
 
     if (openFile(argv[1])) {
-        printf("Error opening file"); 
+        printf("Error opening file\n"); 
         return 1;
     }
 
@@ -333,6 +394,8 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < labels.size; i++) {
         printf("loc: %X name: %s\n", (labels.plabel + i)->memlocation,(labels.plabel + i)->name);
     }
+
+    if (secondPass() == -1) return 1;
 
     freeLabelTable();
     return 0;
