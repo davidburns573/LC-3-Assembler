@@ -36,10 +36,12 @@ struct labeltable {
 };
 
 /***global data***/
+FILE *fptr;
 struct totlines lines = {0, NULL};
 struct labeltable labels = {0, NULL}; 
-FILE *fptr;
 char conversionerror = 0; //will be set to anything but zero if conversion error
+short *origtable = NULL;
+short *mcode = NULL;
 
 
 int openFile(char *filename) {
@@ -293,16 +295,44 @@ void freeLabelTable(void) {
 }
 
 /**
+ * removes label from instruction
+ * @char *f start of line string immediately after label
+**/
+void removeLabel(struct line *curline, char *f) {
+    while (*f == ' ' || *f == '\t') f++;
+    if (*f == '\0') {
+        curline->len = 0;
+        free(curline->chars);
+        curline->chars = NULL;
+        return;
+    }
+    char *c = f;
+    int numLetters = 0;
+    while (*c != '\0') {
+        c++; numLetters++;
+    }
+    numLetters++;
+    c = (char *) malloc(numLetters);
+    memcpy(c, f, numLetters);
+    c[numLetters - 1] = '\0';
+
+    free(curline->chars);
+    curline->chars = c;
+    curline->len = numLetters;
+}
+
+/**
  * Adds label to label table
 **/
-void addLabel(char *f, int location) {
-    char *c = f;
+void addLabel(struct line *curline, int location) {
+    char *c = curline->chars;
     int numLetters = 0;
     while (*c != '\0' && *c != ' ' && *c != '\t') {
         c++; numLetters++;
     }
+    char *end = c;
     c = (char *) malloc(numLetters + 1);
-    memcpy(c, f, numLetters);
+    memcpy(c, curline->chars, numLetters);
     c[numLetters] = '\0';
 
     struct label nlabel;
@@ -313,18 +343,24 @@ void addLabel(char *f, int location) {
     labels.plabel = (struct label *) realloc(labels.plabel, 
                         labels.size * sizeof(struct label));
     labels.plabel[labels.size - 1] = nlabel;
+
+    removeLabel(curline, end);
 }
 
 /**
  * Create label table with locations in code 
 **/
 int firstPass(void) {
+    origtable = (short *) malloc(sizeof(short) * lines.size);
+    short *origs = origtable;
     char *first = lines.plines->chars;
     int orig = checkOrig(first); //-1 if missing, -2 if malformed
     if (orig == -2) {
         printf("Missing .orig statement\n");
         return -1;
     } else if (orig == -1) return -1;
+    *origs = *origs | orig;
+    origs++;
 
     struct line *curline = lines.plines;
     curline++;
@@ -343,6 +379,7 @@ int firstPass(void) {
                 end = end - inc;
                 inc = 0;
                 orig = chOrig - 1;
+                *origs = *origs | chOrig;
                 goto NEXT;
             } else {
                 printf(".orig statement before .end statement");
@@ -354,15 +391,15 @@ int firstPass(void) {
         } else if (chOrig == -1) return -1;
 
         if (checkForLabel(curline->chars)) {
-            addLabel(curline->chars, inc + orig);
+            addLabel(curline, inc + orig);
         }
         NEXT:
-        inc++; curline++;
+        inc++; curline++; origs++;
     }
 
     int checkFinalEnd = 0;
     if ((checkFinalEnd = checkEnd(curline->chars)) == -2) {
-        printf("Missing .end statement\n");
+        printf("Missing .end statement\n" );
         return -1;
     } else if (checkFinalEnd == -1) return -1;
 
@@ -373,6 +410,16 @@ int firstPass(void) {
  * Convert instructions into machine code
 **/
 int secondPass(void) {
+    struct line *f = lines.plines;
+    short *code = mcode;
+    int orig = checkOrig(f->chars);
+    int size = lines.size - 1;
+    int inc = 0;
+    while (inc < size) {
+        
+
+        inc++;
+    }
     return 0;
 }
 
@@ -395,6 +442,12 @@ int main(int argc, char *argv[]) {
         printf("loc: %X name: %s\n", (labels.plabel + i)->memlocation,(labels.plabel + i)->name);
     }
 
+    for (int i = 0; i < lines.size; i++) {
+        if ((lines.plines + i)->chars != NULL)
+            printf("%s\n", (lines.plines + i)->chars);
+    }
+
+    mcode = (short *) malloc(sizeof(short *) * lines.size);
     if (secondPass() == -1) return 1;
 
     freeLabelTable();
