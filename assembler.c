@@ -295,16 +295,34 @@ void freeLabelTable(void) {
 }
 
 /**
+ * remove empty instruction after removing label
+**/
+void removeEmptyInstruction(void) {
+    struct line *curline = lines.plines;
+    int i = 0;
+    while (i < lines.size && curline->chars != NULL) {
+        i++; curline++;
+    }
+    printf("size: %d inc: %d\n", lines.size, i);
+    while (i < lines.size - 1) {
+        *curline = *(curline + 1);
+        curline++; i++;
+    }
+    lines.size += -1;
+}
+
+/**
  * removes label from instruction
  * @char *f start of line string immediately after label
 **/
-void removeLabel(struct line *curline, char *f) {
+int removeLabel(struct line *curline, char *f) {
     while (*f == ' ' || *f == '\t') f++;
     if (*f == '\0') {
         curline->len = 0;
         free(curline->chars);
         curline->chars = NULL;
-        return;
+        removeEmptyInstruction();
+        return 1;
     }
     char *c = f;
     int numLetters = 0;
@@ -319,12 +337,14 @@ void removeLabel(struct line *curline, char *f) {
     free(curline->chars);
     curline->chars = c;
     curline->len = numLetters;
+    
+    return 0;
 }
 
 /**
  * Adds label to label table
 **/
-void addLabel(struct line *curline, int location) {
+int addLabel(struct line *curline, int location) {
     char *c = curline->chars;
     int numLetters = 0;
     while (*c != '\0' && *c != ' ' && *c != '\t') {
@@ -344,7 +364,7 @@ void addLabel(struct line *curline, int location) {
                         labels.size * sizeof(struct label));
     labels.plabel[labels.size - 1] = nlabel;
 
-    removeLabel(curline, end);
+    return removeLabel(curline, end);
 }
 
 /**
@@ -391,8 +411,12 @@ int firstPass(void) {
         } else if (chOrig == -1) return -1;
 
         if (checkForLabel(curline->chars)) {
-            addLabel(curline, inc + orig);
+            if (addLabel(curline, inc + orig)) {
+                end += -1;
+                continue;
+            }
         }
+
         NEXT:
         inc++; curline++; origs++;
     }
@@ -442,9 +466,8 @@ int main(int argc, char *argv[]) {
         printf("loc: %X name: %s\n", (labels.plabel + i)->memlocation,(labels.plabel + i)->name);
     }
 
-    for (int i = 0; i < lines.size; i++) {
-        if ((lines.plines + i)->chars != NULL)
-            printf("%s\n", (lines.plines + i)->chars);
+    for (int i = 0; i < lines.size && (lines.plines + i)->chars != NULL; i++) {
+        printf("%s\n", (lines.plines + i)->chars);
     }
 
     mcode = (short *) malloc(sizeof(short *) * lines.size);
