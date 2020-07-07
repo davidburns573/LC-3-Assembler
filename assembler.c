@@ -6,6 +6,7 @@
 
 /***constants***/
 #define TOLOWER(a) ((a >= 'A' && a <= 'Z') ? (a) : ((a) | (1 << 5)))
+#define TOUPPER(a) ((a) & ~(1 << 5))
 #define ORIG ".orig"
 #define END ".end"
 #define STRINGZ ".stringz"
@@ -268,18 +269,18 @@ int checkEnd(char *f) {
 int checkForLabel(char *f) {
     char *p = f;
     while (*p != '\0' && *p != ' ' && *p != '\t') { //checks first word, only letters
-        if ((*p & ~(1 << 5)) < 'A' || (*p & ~(1 << 5)) > 'Z') return 0;
+        if (TOUPPER(*p) < 'A' || TOUPPER(*p) > 'Z') return 0;
         p++;
     }
     for (int i = 0; i < INSTRSIZE; i++) {
         char *instr = INSTRUCTIONS[i];
         char *x = f;
-        while (*instr != '\0' && (*instr == (*x & ~(1 << 5)))) {
-            if ((*x & ~(1 << 5)) < 'A' || (*x & ~(1 << 5)) > 'Z') return 0; //remove PSEUDO-OPs
+        while (*instr != '\0' && (*instr == TOUPPER(*x))) {
+            if ((*x & ~(1 << 5)) < 'A' || TOUPPER(*x) > 'Z') return 0; //remove PSEUDO-OPs
             instr++; x++;
         }
         if (*instr == '\0' && (*x == ' ' || *x == '\t')) return 0; //return 0 for not label
-        char up = (*f & ~(1 << 5));
+        char up = TOUPPER(*f);
         if (up > 'A' && up < 'Z' && up < *INSTRUCTIONS[i]) return 1; //return 1 for label
     }
     return 1;
@@ -306,7 +307,6 @@ void removeEmptyInstruction(void) {
     while (i < lines.size && curline->chars != NULL) {
         i++; curline++;
     }
-    printf("size: %d inc: %d\n", lines.size, i);
     while (i < lines.size - 1) {
         *curline = *(curline + 1);
         curline++; i++;
