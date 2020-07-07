@@ -370,18 +370,52 @@ int addLabel(struct line *curline, int location) {
     return removeLabel(curline, end);
 }
 
+void addLinesBlkw(int index, int size) {
+    lines.size += size;
+    lines.plines = (struct line *) realloc(lines.plines, 
+                                sizeof(struct line) * lines.size);
+
+    struct line empty = {7,";x0000"};
+    int end = lines.size - size;
+    while (end > index) {
+        lines.plines[end + size] = lines.plines[end];
+        lines.plines[end] = empty;
+        end--;
+    }
+    lines.plines[index] = empty;
+}
+
 int parseStringz(char *f) {
     return 0;
 }
 
 int parseBlkw(char *f) {
-    return 0;
+    int size = 0;
+    switch(*f) {
+        case '0' :
+            size = octalStrToInt(f);
+            break;
+        case 'x': case 'X':
+            size = hexStrToInt(f);
+            break;
+        default:
+            size = decStrToInt(f);
+            break;
+    }
+    if (conversionerror) {
+        printf(".blkw not a valid number");
+        return -1;
+    } else if (size <= 0) {
+        printf(".blkw cannot be zero or negative");
+        return -1;
+    }
+    return size;
 }
 
 /**
  * Checks for pseudoops .blkw or .stringz
 **/
-int checkStringzBlkw(struct line *curline) {
+int checkStringzBlkw(struct line *curline, int index) {
     char *f = curline->chars;
     char *stringz = STRINGZ;
     while (*stringz != '\0' && *f != '\0' && TOLOWER(*f) == *stringz) {
@@ -398,9 +432,12 @@ int checkStringzBlkw(struct line *curline) {
     }
     if (*blkw == '\0' && (*f == ' ' || *f == '\t')) {
         while (*f == ' ' || *f == '\t') f++;
-        return parseBlkw(f);
+        int size = 0;
+        if ((size = parseBlkw(f)) == -1) return -1;
+        addLinesBlkw(index, size - 1);
+        return size - 1;
     }
-    return -1;
+    return -2;
 }
 
 /**
@@ -453,11 +490,12 @@ int firstPass(void) {
             }
         }
         int memspace = 0;
-        if ((memspace = checkStringzBlkw(curline)) >= 0) {
+        if ((memspace = checkStringzBlkw(curline, inc + lines.size - end)) >= 0) {
             inc += memspace;
-            curline += memspace;
+            end += memspace;
+            curline = &lines.plines[lines.size - end + inc];
             origs += memspace;
-        }
+        } else if (memspace == -1) return -1;
         NEXT:
         inc++; curline++; origs++;
     }
