@@ -5,8 +5,11 @@
 #include <string.h>
 
 /***constants***/
+#define TOLOWER(a) ((a >= 'A' && a <= 'Z') ? (a) : ((a) | (1 << 5)))
 #define ORIG ".orig"
 #define END ".end"
+#define STRINGZ ".stringz"
+#define BLKW ".blkw"
 #define INSTRSIZE 29
 const char *INSTRUCTIONS[] = {"ADD","AND","BR","BRN","BRP","BRZ",
                               "BRNZ","BRNP","BRZP","BRNZP","GETC","HALT",
@@ -367,6 +370,39 @@ int addLabel(struct line *curline, int location) {
     return removeLabel(curline, end);
 }
 
+int parseStringz(char *f) {
+    return 0;
+}
+
+int parseBlkw(char *f) {
+    return 0;
+}
+
+/**
+ * Checks for pseudoops .blkw or .stringz
+**/
+int checkStringzBlkw(struct line *curline) {
+    char *f = curline->chars;
+    char *stringz = STRINGZ;
+    while (*stringz != '\0' && *f != '\0' && TOLOWER(*f) == *stringz) {
+        f++; stringz++;
+    }
+    if (*stringz == '\0' && (*f == ' ' || *f == '\t')) {
+        while (*f == ' ' || *f == '\t') f++;
+        return parseStringz(f);
+    }
+    f = curline->chars;
+    char *blkw = BLKW;
+    while (*blkw != '\0' && *f != '\0' && TOLOWER(*f) == *blkw) {
+        f++; blkw++;
+    }
+    if (*blkw == '\0' && (*f == ' ' || *f == '\t')) {
+        while (*f == ' ' || *f == '\t') f++;
+        return parseBlkw(f);
+    }
+    return -1;
+}
+
 /**
  * Create label table with locations in code 
 **/
@@ -416,7 +452,12 @@ int firstPass(void) {
                 continue;
             }
         }
-
+        int memspace = 0;
+        if ((memspace = checkStringzBlkw(curline)) >= 0) {
+            inc += memspace;
+            curline += memspace;
+            origs += memspace;
+        }
         NEXT:
         inc++; curline++; origs++;
     }
