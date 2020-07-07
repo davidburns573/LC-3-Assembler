@@ -375,8 +375,7 @@ int addLabel(struct line *curline, int location) {
  * into empty comment lines that can easily be parsed ("$0000")
 **/
 void addLines(int index, int size) {
-    lines.size += size;
-    printf("here");
+    lines.size = lines.size + size;
     lines.plines = (struct line *) realloc(lines.plines, 
                                 sizeof(struct line) * lines.size);
     char *c = (char *) malloc(6);
@@ -384,7 +383,10 @@ void addLines(int index, int size) {
     struct line empty;
     empty.len = 6;
     empty.chars = c;
-    int end = lines.size - size;
+    for (int i = 0; i < size; i++) { //initialize extra lines to the empty line
+        lines.plines[lines.size - size + i] = empty;
+    }
+    int end = lines.size - size - 1;
     while (end > index) {
         lines.plines[end + size] = lines.plines[end];
         lines.plines[end] = empty;
@@ -451,7 +453,7 @@ int parseBlkw(char *f) {
 void charToHexStr(char *f, char c) {
     short s = c;
     for (int i = 3; i >= 0; i--) {
-        short x = (s >> (i * 4));
+        short x = 15 & (s >> (i * 4));
         if (x <= 9) {
             *f = x + '0';
         } else {
@@ -465,7 +467,6 @@ void addString(int index, char *f) {
     struct line *p = &lines.plines[index];
     f++; //remove quotation mark
     while (*f != '"') {
-        printf("%s", p->chars);
         char *c = (char *) malloc(6);
         *c = '$';
         charToHexStr(c + 1, *f);
@@ -476,6 +477,14 @@ void addString(int index, char *f) {
         *p = nline;
         f++; p++;
     }
+    char *c = (char *) malloc(6);
+    *c = '$';
+    charToHexStr(c + 1, '\0');
+    c[5] = '\0';
+    struct line nline;
+    nline.len = 6;
+    nline.chars = c;
+    *p = nline;
 }
 
 /**
@@ -547,7 +556,7 @@ int firstPass(void) {
                 *origs = *origs | chOrig;
                 goto NEXT;
             } else {
-                printf(".orig statement before .end statement");
+                printf(".orig statement before .end statement\n");
                 return -1;
             }
         } else if (chOrig == -2 && orig == -1) {
@@ -617,8 +626,9 @@ int main(int argc, char *argv[]) {
         printf("loc: %X name: %s\n", (labels.plabel + i)->memlocation,(labels.plabel + i)->name);
     }
 
-    for (int i = 0; i < lines.size && (lines.plines + i)->chars != NULL; i++) {
-        printf("%s\n", (lines.plines + i)->chars);
+    printf("%d\n", lines.size);
+    for (int i = 0; i < lines.size; i++) {
+        printf("%d %s\n", i, (lines.plines + i)->chars);
     }
 
     mcode = (short *) malloc(sizeof(short *) * lines.size);
