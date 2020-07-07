@@ -370,12 +370,20 @@ int addLabel(struct line *curline, int location) {
     return removeLabel(curline, end);
 }
 
-void addLinesBlkw(int index, int size) {
+/**
+ * Adds @size number of lines and converts @index - @index + @size
+ * into empty comment lines that can easily be parsed ("$0000")
+**/
+void addLines(int index, int size) {
     lines.size += size;
+    printf("here");
     lines.plines = (struct line *) realloc(lines.plines, 
                                 sizeof(struct line) * lines.size);
-
-    struct line empty = {7,";x0000"};
+    char *c = (char *) malloc(6);
+    strcpy(c, "$0000");
+    struct line empty;
+    empty.len = 6;
+    empty.chars = c;
     int end = lines.size - size;
     while (end > index) {
         lines.plines[end + size] = lines.plines[end];
@@ -385,10 +393,38 @@ void addLinesBlkw(int index, int size) {
     lines.plines[index] = empty;
 }
 
+/**
+ * parses .stringz to ensure the pseudo-op is valid and determines
+ * the size of the string
+**/
 int parseStringz(char *f) {
-    return 0;
+    if (*f != '"') {
+        printf(".stringz invalid string\n");
+        return -1;
+    }
+    f++;
+    int size = 1;
+    while (*f != '"') {
+        if (*f == '\0') {
+            printf(".stringz invalid string\n");
+            return -1;
+        }
+        f++; size++;
+    }
+    f++;
+    while (*f != '\0') {
+        if (*f != ' ' && *f != '\t') {
+            printf("malformed .stringz pseudo-op\n");
+            return -1;
+        }
+        f++;
+    }
+    return size;
 }
 
+/**
+ * Parses .blkw line and finds number of lines to add
+**/
 int parseBlkw(char *f) {
     int size = 0;
     switch(*f) {
@@ -403,13 +439,43 @@ int parseBlkw(char *f) {
             break;
     }
     if (conversionerror) {
-        printf(".blkw not a valid number");
+        printf(".blkw not a valid number\n");
         return -1;
     } else if (size <= 0) {
-        printf(".blkw cannot be zero or negative");
+        printf(".blkw cannot be zero or negative\n");
         return -1;
     }
     return size;
+}
+
+void charToHexStr(char *f, char c) {
+    short s = c;
+    for (int i = 3; i >= 0; i--) {
+        short x = (s >> (i * 4));
+        if (x <= 9) {
+            *f = x + '0';
+        } else {
+            *f = x + 'A' - 10;
+        }
+        f++;
+    }
+}
+
+void addString(int index, char *f) {
+    struct line *p = &lines.plines[index];
+    f++; //remove quotation mark
+    while (*f != '"') {
+        printf("%s", p->chars);
+        char *c = (char *) malloc(6);
+        *c = '$';
+        charToHexStr(c + 1, *f);
+        c[5] = '\0';
+        struct line nline;
+        nline.len = 6;
+        nline.chars = c;
+        *p = nline;
+        f++; p++;
+    }
 }
 
 /**
@@ -423,7 +489,11 @@ int checkStringzBlkw(struct line *curline, int index) {
     }
     if (*stringz == '\0' && (*f == ' ' || *f == '\t')) {
         while (*f == ' ' || *f == '\t') f++;
-        return parseStringz(f);
+        int size = 0;
+        if ((size = parseStringz(f)) == -1) return -1;
+        addLines(index, size - 1);
+        addString(index, f);
+        return size - 1;
     }
     f = curline->chars;
     char *blkw = BLKW;
@@ -434,14 +504,16 @@ int checkStringzBlkw(struct line *curline, int index) {
         while (*f == ' ' || *f == '\t') f++;
         int size = 0;
         if ((size = parseBlkw(f)) == -1) return -1;
-        addLinesBlkw(index, size - 1);
+        addLines(index, size - 1);
         return size - 1;
     }
     return -2;
 }
 
 /**
- * Create label table with locations in code 
+ * Create label table with locations in code
+ * Parse .orig and .end blocks of code
+ * Parse .blkw and .stringz pseudo-ops
 **/
 int firstPass(void) {
     origtable = (short *) malloc(sizeof(short) * lines.size);
