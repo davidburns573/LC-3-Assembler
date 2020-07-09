@@ -16,6 +16,16 @@
 #define FILL ".fill"
 #define INSTRSIZE 29
 
+/***instructions***/
+#define ADD "ADD"
+#define ADD_B (1 << 12)
+#define AND "AND"
+#define AND_B (5 << 12)
+
+/***sums***/
+#define ADD_SUM 'A' + 'D' + 'D'
+#define AND_SUM 'A' + 'N' + 'D'
+
 /***structs***/
 struct line {
     int len;
@@ -43,6 +53,7 @@ int hexStrToInt(char *f);
 int decStrToInt(char *f);
 
 int firstPass(void);
+int checkOrig(char *f);
 
 int secondPass(void);
 

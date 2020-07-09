@@ -10,7 +10,6 @@ FILE *fptr;
 struct totlines lines = {0, NULL};
 struct labeltable labels = {0, NULL}; 
 char conversionerror = 0; //will be set to anything but zero if conversion error
-short *origtable = NULL;
 short *mcode = NULL;
 
 int openFile(char *filename) {
@@ -206,9 +205,12 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < lines.size; i++) {
         printf("%d %s\n", i, (lines.plines + i)->chars);
     }
-    
-    mcode = (short *) malloc(sizeof(short *) * lines.size);
+
     if (secondPass() == -1) return 1;
+
+    for (int i = 0; i < lines.size; i++) {
+        printf("%d x%04x\n", i, *(mcode + i));
+    }
 
     freeLabelTable();
     return 0;

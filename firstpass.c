@@ -6,7 +6,6 @@ extern FILE *fptr;
 extern struct totlines lines;
 extern struct labeltable labels;
 extern char conversionerror; //will be set to anything but zero if conversion error
-extern short *origtable;
 extern short *mcode;
 
 /**
@@ -365,16 +364,12 @@ int checkFill(struct line *curline) {
  * Parse .blkw and .stringz pseudo-ops
 **/
 int firstPass(void) {
-    origtable = (short *) malloc(sizeof(short) * lines.size);
-    short *origs = origtable;
     char *first = lines.plines->chars;
     int orig = checkOrig(first); //-1 if missing, -2 if malformed
     if (orig == -2) {
         printf("Missing initial .orig statement\n");
         return -1;
     } else if (orig == -1) return -1;
-    *origs = *origs | orig;
-    origs++;
 
     struct line *curline = lines.plines;
     curline++;
@@ -395,7 +390,6 @@ int firstPass(void) {
                 end = end - inc;
                 inc = 0;
                 orig = chOrig;
-                *origs = *origs | chOrig;
                 inc++; curline++;
                 continue;
             } else {
@@ -418,13 +412,12 @@ int firstPass(void) {
             inc += memspace;
             end += memspace;
             curline = &lines.plines[lines.size - end + inc];
-            origs += memspace;
         } else if (memspace == -1) return -1;
 
         int fill = 0;
         if ((fill = checkFill(curline)) == -1) return -1;
 
-        inc++; curline++; origs++;
+        inc++; curline++;
     }
 
     int checkFinalEnd = 0;
