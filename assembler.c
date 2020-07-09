@@ -173,6 +173,12 @@ int hexStrToInt(char *f) {
 
 int decStrToInt(char *f) {
     if (*f == '#') f++; //remove inital # to denote a decimal number
+    int negative = 0;
+    if (*f == '-') {
+        negative = 1;
+        f++;
+    }
+
     int sum = 0;
     char *s = f;
     int size = 0;
@@ -198,8 +204,8 @@ int decStrToInt(char *f) {
         pow /= 10;
         s++; size--;
     }
+    if (negative) return -sum;
     return sum;
-    return 0;
 }
 
 /**
