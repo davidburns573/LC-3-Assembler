@@ -50,11 +50,31 @@ int checkOrig(char *f) {
 }
 
 /**
+ * remove empty instruction after removing label
+**/
+void removeEmptyInstruction(void) {
+    struct line *curline = lines.plines;
+    int i = 0;
+    while (i < lines.size && curline->chars != NULL) {
+        i++; curline++;
+    }
+    while (i < lines.size - 1) {
+        *curline = *(curline + 1);
+        curline++; i++;
+    }
+    lines.size += -1;
+    //resize lines.plines to - 1 of original size
+    lines.plines = (struct line *) realloc(lines.plines, 
+                            sizeof(struct line) * lines.size);
+}
+
+/**
  * Checks for a .end statement
  * @param f a line
- * @return 0 if normal, -1 if malformed, -2 if not there
+ * @return 0 if there, -1 if malformed, -2 if not there
 **/
-int checkEnd(char *f) {
+int checkEnd(struct line *curline) {
+    char *f = curline->chars;
     char *end = END;
     while (*end != '\0') {
         if (*f != *end) {
@@ -68,6 +88,9 @@ int checkEnd(char *f) {
             return -1;
         }
     }
+    free(curline->chars);
+    curline->chars = NULL;
+    removeEmptyInstruction();
     return 0;
 }
 
@@ -92,22 +115,6 @@ int checkForLabel(char *f) {
         if (up > 'A' && up < 'Z' && up < *INSTRUCTIONS[i]) return 1; //return 1 for label
     }
     return 1;
-}
-
-/**
- * remove empty instruction after removing label
-**/
-void removeEmptyInstruction(void) {
-    struct line *curline = lines.plines;
-    int i = 0;
-    while (i < lines.size && curline->chars != NULL) {
-        i++; curline++;
-    }
-    while (i < lines.size - 1) {
-        *curline = *(curline + 1);
-        curline++; i++;
-    }
-    lines.size += -1;
 }
 
 /**
@@ -363,7 +370,7 @@ int firstPass(void) {
     char *first = lines.plines->chars;
     int orig = checkOrig(first); //-1 if missing, -2 if malformed
     if (orig == -2) {
-        printf("Missing .orig statement\n");
+        printf("Missing initial .orig statement\n");
         return -1;
     } else if (orig == -1) return -1;
     *origs = *origs | orig;
@@ -375,9 +382,11 @@ int firstPass(void) {
     int end = lines.size - 1;
     while (inc < end - 1) {
         int checkend = 0;
-        if ((checkend = checkEnd(curline->chars)) == 0) {    //.end is there
+        if ((checkend = checkEnd(curline)) == 0) {    //.end is there
+            end += -1;
+            curline = &lines.plines[lines.size - end + inc];
             orig = -1;
-            goto NEXT;
+            continue;
         } else if (checkend == -1) return -1; //.end is malformed
         int chOrig = 0;
 
@@ -385,9 +394,10 @@ int firstPass(void) {
             if (orig == -1) {
                 end = end - inc;
                 inc = 0;
-                orig = chOrig - 1;
+                orig = chOrig;
                 *origs = *origs | chOrig;
-                goto NEXT;
+                inc++; curline++;
+                continue;
             } else {
                 printf(".orig statement before .end statement\n");
                 return -1;
@@ -414,13 +424,12 @@ int firstPass(void) {
         int fill = 0;
         if ((fill = checkFill(curline)) == -1) return -1;
 
-        NEXT:
         inc++; curline++; origs++;
     }
 
     int checkFinalEnd = 0;
-    if ((checkFinalEnd = checkEnd(curline->chars)) == -2) {
-        printf("Missing .end statement\n" );
+    if ((checkFinalEnd = checkEnd(curline)) == -2) {
+        printf("Missing final .end statement\n" );
         return -1;
     } else if (checkFinalEnd == -1) return -1;
 

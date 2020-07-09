@@ -9,6 +9,8 @@ extern char conversionerror; //will be set to anything but zero if conversion er
 extern short *origtable;
 extern short *mcode;
 
+
+
 /**
  * Convert instructions into machine code
 **/
