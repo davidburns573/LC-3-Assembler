@@ -11,6 +11,7 @@
 #define END ".end"
 #define STRINGZ ".stringz"
 #define BLKW ".blkw"
+#define FILL ".fill"
 #define INSTRSIZE 29
 const char *INSTRUCTIONS[] = {"ADD","AND","BR","BRN","BRP","BRZ",
                               "BRNZ","BRNP","BRZP","BRNZP","GETC","HALT",
@@ -392,6 +393,7 @@ void addLines(int index, int size) {
         lines.plines[end] = empty;
         end--;
     }
+    free(lines.plines[index].chars);
     lines.plines[index] = empty;
 }
 
@@ -450,8 +452,7 @@ int parseBlkw(char *f) {
     return size;
 }
 
-void charToHexStr(char *f, char c) {
-    short s = c;
+void shortToHexStr(char *f, short s) {
     for (int i = 3; i >= 0; i--) {
         short x = 15 & (s >> (i * 4));
         if (x <= 9) {
@@ -469,7 +470,7 @@ void addString(int index, char *f) {
     while (*f != '"') {
         char *c = (char *) malloc(6);
         *c = '$';
-        charToHexStr(c + 1, *f);
+        shortToHexStr(c + 1, *f);
         c[5] = '\0';
         struct line nline;
         nline.len = 6;
@@ -479,7 +480,7 @@ void addString(int index, char *f) {
     }
     char *c = (char *) malloc(6);
     *c = '$';
-    charToHexStr(c + 1, '\0');
+    shortToHexStr(c + 1, '\0');
     c[5] = '\0';
     struct line nline;
     nline.len = 6;
@@ -517,6 +518,39 @@ int checkStringzBlkw(struct line *curline, int index) {
         return size - 1;
     }
     return -2;
+}
+
+int checkFill(struct line *curline) {
+    char *f = curline->chars;
+    char *fill = FILL;
+    while (*fill != '\0' && *f != '\0' && TOLOWER(*f) == *fill) {
+        fill++; f++;
+    }
+    if (*fill != '\0') return -2;
+    if (*f != ' ' && *f != '\t') return -1;
+    while (*f == ' ' || *f == '\t') f++;
+    int val = 0;
+    switch (*f) {
+        case '0' :
+            val = octalStrToInt(f);
+            break;
+        case 'x': case 'X':
+            val = hexStrToInt(f);
+            break;
+        default:
+            val = decStrToInt(f);
+            break;
+    }
+    if (conversionerror) {
+        printf(".fill not a valid number\n");
+        return -1;
+    }
+    free(curline->chars);
+    curline->chars = (char *) malloc(6);
+    curline->chars[0] = '$';
+    shortToHexStr(curline->chars + 1,val);
+    curline->chars[5] = '\0';
+    return 0;
 }
 
 /**
@@ -577,6 +611,10 @@ int firstPass(void) {
             curline = &lines.plines[lines.size - end + inc];
             origs += memspace;
         } else if (memspace == -1) return -1;
+
+        int fill = 0;
+        if ((fill = checkFill(curline)) == -1) return -1;
+
         NEXT:
         inc++; curline++; origs++;
     }
@@ -630,7 +668,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < lines.size; i++) {
         printf("%d %s\n", i, (lines.plines + i)->chars);
     }
-
+    
     mcode = (short *) malloc(sizeof(short *) * lines.size);
     if (secondPass() == -1) return 1;
 
