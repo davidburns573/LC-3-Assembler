@@ -42,6 +42,9 @@ int octalStrToInt(char *f);
 int hexStrToInt(char *f);
 int decStrToInt(char *f);
 
+int firstPass(void);
+
 int secondPass(void);
+
 
 #endif
