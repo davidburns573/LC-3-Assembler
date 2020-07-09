@@ -1,53 +1,17 @@
-#define  _GNU_SOURCE
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
+#include "assembler.h"
 
-/***constants***/
-#define TOLOWER(a) ((a >= 'A' && a <= 'Z') ? (a) : ((a) | (1 << 5)))
-#define TOUPPER(a) ((a) & ~(1 << 5))
-#define ORIG ".orig"
-#define END ".end"
-#define STRINGZ ".stringz"
-#define BLKW ".blkw"
-#define FILL ".fill"
-#define INSTRSIZE 29
+/***global data***/
 const char *INSTRUCTIONS[] = {"ADD","AND","BR","BRN","BRP","BRZ",
                               "BRNZ","BRNP","BRZP","BRNZP","GETC","HALT",
                               "IN","JMP","JSR","JSRR","LD","LDI",
                               "LDR","LEA","NOT","OUT","PUTS","RET",
                               "RTI","ST","STI","STR","TRAP"};
-
-/***structs***/
-struct line {
-    int len;
-    char *chars;
-};
-
-struct totlines {
-    int size;
-    struct line *plines;
-};
-
-struct label {
-    char *name;
-    int memlocation;
-};
-
-struct labeltable {
-    int size;
-    struct label *plabel;
-};
-
-/***global data***/
 FILE *fptr;
 struct totlines lines = {0, NULL};
 struct labeltable labels = {0, NULL}; 
 char conversionerror = 0; //will be set to anything but zero if conversion error
 short *origtable = NULL;
 short *mcode = NULL;
-
 
 int openFile(char *filename) {
     fptr = fopen(filename, "r");
@@ -634,23 +598,6 @@ int firstPass(void) {
     return 0;
 }
 
-/**
- * Convert instructions into machine code
-**/
-int secondPass(void) {
-    struct line *f = lines.plines;
-    short *code = mcode;
-    int orig = checkOrig(f->chars);
-    int size = lines.size - 1;
-    int inc = 0;
-    while (inc < size) {
-        
-
-        inc++;
-    }
-    return 0;
-}
-
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         printf("Need file to assemble\n"); 
@@ -670,7 +617,6 @@ int main(int argc, char *argv[]) {
         printf("loc: %X name: %s\n", (labels.plabel + i)->memlocation,(labels.plabel + i)->name);
     }
 
-    printf("%d\n", lines.size);
     for (int i = 0; i < lines.size; i++) {
         printf("%d %s\n", i, (lines.plines + i)->chars);
     }
