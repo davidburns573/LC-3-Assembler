@@ -9,31 +9,94 @@ extern char conversionerror; //will be set to anything but zero if conversion er
 extern short *mcode;
 
 
+/**
+ * parse 2 registers given a character string
+ * A char (bits 0-3 are second reg, 4-7 are first reg), -1 if error
+**/
+char *parse2Reg(char *f, char *first, char *second) {
+    while (*f == ' ' || *f == '\t') f++;
+    if (TOUPPER(*f) != 'R') return NULL;
+    f++;
+    if (*f < '0' || *f > '7') return NULL;
+    *first = (*f - '0');
+    f++;
+
+    while (*f == ' ' || *f == '\t') f++;
+    if (*f != ',') return NULL;
+    f++;
+
+    while (*f == ' ' || *f == '\t') f++;
+    if (TOUPPER(*f) != 'R') return NULL;
+    f++;
+    if (*f < '0' && *f > '7') return NULL;
+    *second = (*f - '0');
+    f++;
+
+    return f;
+}
 
 /**
- * check if line is a valid ADD instruction
+ * parse 1 register given a character string
+ * @return NULL if error, updated pointer if not
+**/
+char * parseReg(char *f, char *val) {
+    while (*f == ' ' || *f == '\t') f++;
+    if (TOUPPER(*f) != 'R') return NULL;
+    f++;
+    if (*f < '0' || *f > '7') return NULL;
+    *val = (*f - '0');
+    f++;
+    return f;
+}
+
+/**
+ * check if line is a valid ADD/AND instruction
  * @return 0 if found, -1 if error, -2 if not found
 **/
-int checkAdd(struct line *curline, int loc, short *code) {
+int checkAddAnd(struct line *curline, int loc, short *code, char *instr) {
     char *f = curline->chars;
-    char *add = ADD;
+    char *stinstr = instr;
 
-    while (*f != ' ' && *f != '\t' && *f != '\0' && TOUPPER(*f) == *add) {
+    while (*f != ' ' && *f != '\t' && *f != '\0' && TOUPPER(*f) == *instr) {
         if (TOUPPER(*f) < 'A' || TOUPPER(*f) > 'Z') {
             printf("Malformed instruction @x%04x\n", loc);
             return -1;
         }
-        add++; f++;
+        instr++; f++;
     }
-    if (*add != '\0') return -2;
-    if (*add == '\0' && *f != ' ' && *f != '\t') {
-        printf("Malformed ADD instruction @x%04x\n", loc);
+    if (*instr != '\0') return -2;
+    if (*instr == '\0' && *f != ' ' && *f != '\t') {
+        printf("Malformed instruction @x%04x\n", loc);
         return -1;
     }
 
-    *code = ADD_B;
+    if (*(stinstr+1) == 'D') *code = ADD_B;
+    else *code = AND_B;
 
-    printf("ADD: %04x\n", *code);
+    char dst, src1;
+    if ((f = parse2Reg(f, &dst, &src1)) == NULL) {
+
+    }
+    *code = (*code) | ((7 & dst) << 9) | ((7 & src1) << 6);
+    
+    while (*f == ' ' || *f == '\t') f++;
+    if (*f != ',') {
+        printf("Malformed instruction @x%04x\n", loc);
+        return -1;
+    }
+    f++;
+    while (*f == ' ' || *f == '\t') f++;
+
+    if (TOUPPER(*f) == 'R') {
+        char val = 0;
+        if ((f = parseReg(f, &val)) == NULL) {
+            printf("Malformed instruction @x%04x\n", loc);
+            return -1;
+        }
+        *code = (*code) | (7 & val);
+    } else {
+        //parseImmediate(f, &val);
+    }
 
     return 0;
 }
@@ -52,7 +115,10 @@ int testInstructions(struct line *curline, int loc, short *code) {
 
     int instr = 0;
     if (sum == ADD_SUM)
-        if ((instr = checkAdd(curline, loc, code)) != -2) return instr;
+        if ((instr = checkAddAnd(curline, loc, code, ADD)) != -2) return instr;
+
+    if (sum == AND_SUM)
+        if ((instr = checkAddAnd(curline, loc, code, AND)) != -2) return instr;
     
     return -2;
 }
@@ -87,7 +153,7 @@ int secondPass(void) {
             continue;
         }
 
-        if (testInstructions(curline, orig + index, code + i) == -1) return -1;
+        if (testInstructions(curline, orig + index, code) == -1) return -1;
 
         index++; i++; code++; curline++;
     }
