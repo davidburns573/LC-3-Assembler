@@ -65,25 +65,29 @@ char * parseImmediate(char *f, char *val) {
 }
 
 /**
+ * Checks if instr is equal to passed in character string
+ * @returns indexed pointer if valid, NULL if error, and -2 if not equal
+**/
+char * checkInstruction(char *instr, char *f) {
+    while (*f != ' ' && *f != '\t' && *f != '\0' && TOUPPER(*f) == *instr) {
+        if (TOUPPER(*f) < 'A' || TOUPPER(*f) > 'Z') return NULL;
+        instr++; f++;
+    }
+    if (*instr != '\0') return (char *) -2;
+    if (*instr == '\0' && *f != ' ' && *f != '\t') return NULL;
+    return f;
+}
+
+/**
  * check if line is a valid ADD/AND instruction
  * @return 0 if found, -1 if error, -2 if not found
 **/
-int checkAddAnd(struct line *curline, int loc, short *code, char *instr) {
+int checkAddAnd(struct line *curline, short *code, char *instr) {
     char *f = curline->chars;
     char *stinstr = instr;
 
-    while (*f != ' ' && *f != '\t' && *f != '\0' && TOUPPER(*f) == *instr) {
-        if (TOUPPER(*f) < 'A' || TOUPPER(*f) > 'Z') {
-            printf("Malformed instruction @x%04x\n", loc);
-            return -1;
-        }
-        instr++; f++;
-    }
-    if (*instr != '\0') return -2;
-    if (*instr == '\0' && *f != ' ' && *f != '\t') {
-        printf("Malformed instruction @x%04x\n", loc);
-        return -1;
-    }
+    if ((f = checkInstruction(instr, f)) == NULL) return -1;
+    else if ((long) f == -2) return -2;
 
     if (*(stinstr+1) == 'D') *code = ADD_B;
     else *code = AND_B;
@@ -95,34 +99,23 @@ int checkAddAnd(struct line *curline, int loc, short *code, char *instr) {
     *code = (*code) | ((7 & dst) << 9) | ((7 & src1) << 6);
     
     while (*f == ' ' || *f == '\t') f++;
-    if (*f != ',') {
-        printf("Malformed instruction @x%04x\n", loc);
-        return -1;
-    }
+    if (*f != ',') return -1;
+
     f++;
     while (*f == ' ' || *f == '\t') f++;
 
     char val = 0;
     if (TOUPPER(*f) == 'R') {
-        if ((f = parseReg(f, &val)) == NULL) {
-            printf("Malformed instruction @x%04x\n", loc);
-            return -1;
-        }
+        if ((f = parseReg(f, &val)) == NULL) return -1;
         *code = (*code) | (7 & val);
     } else {
-        if ((f = parseImmediate(f, &val)) == NULL) {
-            printf("Malformed instruction @x%04x\n", loc);
-            return -1;
-        }
+        if ((f = parseImmediate(f, &val)) == NULL) return -1;
         *code = (*code) | (31 & val) | (1 << 5);
     }
 
     while (*f != '\0') {
         if (*f == ';') return 0;
-        if (*f != ' ' && *f != '\t') {
-            printf("Malformed instruction @x%04x\n", loc);
-            return -1;
-        }
+        if (*f != ' ' && *f != '\t') return -1;
         f++;
     }
 
@@ -143,10 +136,10 @@ int testInstructions(struct line *curline, int loc, short *code) {
 
     int instr = 0;
     if (sum == ADD_SUM)
-        if ((instr = checkAddAnd(curline, loc, code, ADD)) != -2) return instr;
+        if ((instr = checkAddAnd(curline, code, ADD)) != -2) return instr;
 
     if (sum == AND_SUM)
-        if ((instr = checkAddAnd(curline, loc, code, AND)) != -2) return instr;
+        if ((instr = checkAddAnd(curline, code, AND)) != -2) return instr;
     
     return -2;
 }
@@ -181,7 +174,10 @@ int secondPass(void) {
             continue;
         }
 
-        if (testInstructions(curline, orig + index, code) == -1) return -1;
+        if (testInstructions(curline, orig + index, code) == -1) {
+            printf("Malformed instruction @x%04x\n", orig + index);
+            return -1;
+        }
 
         index++; i++; code++; curline++;
     }
