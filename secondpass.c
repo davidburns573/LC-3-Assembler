@@ -10,32 +10,6 @@ extern short *mcode;
 
 
 /**
- * parse 2 registers given a character string
- * A char (bits 0-3 are second reg, 4-7 are first reg), -1 if error
-**/
-char *parse2Reg(char *f, char *first, char *second) {
-    while (*f == ' ' || *f == '\t') f++;
-    if (TOUPPER(*f) != 'R') return NULL;
-    f++;
-    if (*f < '0' || *f > '7') return NULL;
-    *first = (*f - '0');
-    f++;
-
-    while (*f == ' ' || *f == '\t') f++;
-    if (*f != ',') return NULL;
-    f++;
-
-    while (*f == ' ' || *f == '\t') f++;
-    if (TOUPPER(*f) != 'R') return NULL;
-    f++;
-    if (*f < '0' && *f > '7') return NULL;
-    *second = (*f - '0');
-    f++;
-
-    return f;
-}
-
-/**
  * parse 1 register given a character string
  * @return NULL if error, updated pointer if not
 **/
@@ -46,6 +20,47 @@ char * parseReg(char *f, char *val) {
     if (*f < '0' || *f > '7') return NULL;
     *val = (*f - '0');
     f++;
+    return f;
+}
+
+/**
+ * parse 2 registers given a character string
+ * A char (bits 0-3 are second reg, 4-7 are first reg), -1 if error
+**/
+char * parse2Reg(char *f, char *first, char *second) {
+    if ((f = parseReg(f, first)) == NULL) return NULL;
+
+    while (*f == ' ' || *f == '\t') f++;
+    if (*f != ',') return NULL;
+    f++;
+    
+    if ((f = parseReg(f, second)) == NULL) return NULL;
+
+    return f;
+}
+
+char * parseImmediate(char *f, char *val) {
+    while (*f == ' ' || *f == '\t') f++;
+
+    switch (*f) {
+        case '0':
+            *val = octalStrToInt(f);
+            break;
+        case 'x': case 'X':
+            *val = hexStrToInt(f);
+            break;
+        default:
+            *val = decStrToInt(f);
+            break;
+    }
+
+    printf("%d\n", *val);
+
+    if (conversionerror) return NULL;
+    if (*val < -16 || *val > 15) return NULL;
+
+    while (*f != '\0' && *f != ' ' && *f != '\t' && *f != ';') f++;
+    
     return f;
 }
 
@@ -87,15 +102,28 @@ int checkAddAnd(struct line *curline, int loc, short *code, char *instr) {
     f++;
     while (*f == ' ' || *f == '\t') f++;
 
+    char val = 0;
     if (TOUPPER(*f) == 'R') {
-        char val = 0;
         if ((f = parseReg(f, &val)) == NULL) {
             printf("Malformed instruction @x%04x\n", loc);
             return -1;
         }
         *code = (*code) | (7 & val);
     } else {
-        //parseImmediate(f, &val);
+        if ((f = parseImmediate(f, &val)) == NULL) {
+            printf("Malformed instruction @x%04x\n", loc);
+            return -1;
+        }
+        *code = (*code) | (31 & val) | (1 << 5);
+    }
+
+    while (*f != '\0') {
+        if (*f == ';') return 0;
+        if (*f != ' ' && *f != '\t') {
+            printf("Malformed instruction @x%04x\n", loc);
+            return -1;
+        }
+        f++;
     }
 
     return 0;

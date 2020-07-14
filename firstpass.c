@@ -45,6 +45,7 @@ int checkOrig(char *f) {
         printf(".orig not a valid number\n");
         return -1;
     } else if (codestart < 0) return -1;
+
     return codestart;
 }
 
