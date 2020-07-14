@@ -110,7 +110,7 @@ int checkForLabel(char *f) {
             if ((*x & ~(1 << 5)) < 'A' || TOUPPER(*x) > 'Z') return 0; //remove PSEUDO-OPs
             instr++; x++;
         }
-        if (*instr == '\0' && (*x == ' ' || *x == '\t')) return 0; //return 0 for not label
+        if (*instr == '\0' && (*x == ' ' || *x == '\t' || *x == '\0')) return 0; //return 0 for not label
         char up = TOUPPER(*f);
         if (up > 'A' && up < 'Z' && up < *INSTRUCTIONS[i]) return 1; //return 1 for label
     }
