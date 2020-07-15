@@ -20,7 +20,7 @@ const int nzpSize = 7;
  * parse 1 register given a character string
  * @return NULL if error, updated pointer if not
 **/
-char * parseReg(char *f, char *val) {
+char * parseReg(char *f, int *val) {
     while (*f == ' ' || *f == '\t') f++;
     if (TOUPPER(*f) != 'R') return NULL;
     f++;
@@ -115,7 +115,6 @@ int checkAddAnd(struct line *curline, short *code, char *instr) {
 
     int val = 0;
     if (TOUPPER(*f) == 'R') {
-        val = (char) val;
         if ((f = parseReg(f, &val)) == NULL) return -1;
         *code = (*code) | (7 & val);
     } else {
