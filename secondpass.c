@@ -34,7 +34,7 @@ char * parseReg(char *f, char *val) {
  * parse 2 registers given a character string
  * A char (bits 0-3 are second reg, 4-7 are first reg), -1 if error
 **/
-char * parse2Reg(char *f, char *first, char *second) {
+char * parse2Reg(char *f, int *first, int *second) {
     if ((f = parseReg(f, first)) == NULL) return NULL;
 
     while (*f == ' ' || *f == '\t') f++;
@@ -47,9 +47,10 @@ char * parse2Reg(char *f, char *first, char *second) {
 }
 
 /**
- * parse 5 bit immediate value for ADD and AND operations 
+ * parse offset value
+ * @returns updated pointer, NULL otherwise
 **/
-char * parseImmediate(char *f, char *val) {
+char * parseOffset(char *f, int *val) {
     while (*f == ' ' || *f == '\t') f++;
 
     switch (*f) {
@@ -65,7 +66,6 @@ char * parseImmediate(char *f, char *val) {
     }
 
     if (conversionerror) return NULL;
-    if (*val < -16 || *val > 15) return NULL;
 
     while (*f != '\0' && *f != ' ' && *f != '\t' && *f != ';') f++;
     
@@ -83,7 +83,7 @@ char * checkInstruction(char *instr, char *f) {
         instr++; f++;
     }
     if (*instr != '\0') return (char *) -2;
-    if (*instr == '\0' && *f != ' ' && *f != '\t') return NULL;
+    if (*instr == '\0' && *f != ' ' && *f != '\t' && *f != '\0') return NULL;
     return f;
 }
 
@@ -101,7 +101,7 @@ int checkAddAnd(struct line *curline, short *code, char *instr) {
     if (*(stinstr+1) == 'D') *code = ADD_B;
     else *code = AND_B;
 
-    char dst, src1;
+    int dst, src1;
     if ((f = parse2Reg(f, &dst, &src1)) == NULL) {
 
     }
@@ -113,12 +113,14 @@ int checkAddAnd(struct line *curline, short *code, char *instr) {
     f++;
     while (*f == ' ' || *f == '\t') f++;
 
-    char val = 0;
+    int val = 0;
     if (TOUPPER(*f) == 'R') {
+        val = (char) val;
         if ((f = parseReg(f, &val)) == NULL) return -1;
         *code = (*code) | (7 & val);
     } else {
-        if ((f = parseImmediate(f, &val)) == NULL) return -1;
+        if ((f = parseOffset(f, &val)) == NULL) return -1;
+        if (val < -16 || val > 15) return -1;
         *code = (*code) | (31 & val) | (1 << 5);
     }
 
@@ -169,7 +171,21 @@ int checkBr(struct line *curline, int loc, short *code) {
     }
     *code = *code | (n << 11) | (z << 10) | (p << 9) | BR_B;
 
-    
+    while (*f == ' ' || *f == '\t') f++;
+    if (TOUPPER(*f) > 'Z' || *f < '0' || 
+        (TOUPPER(*f) < 'A' && *f > '9') || *f == '#') return -1;
+
+    int val = 0;
+    char *cf = f;
+    if ((cf = parseOffset(f, &val)) != NULL) {
+        if (val > 255 || val < -256) {
+            printf("Offset value doesn't fit in 9 bits\n");
+            return -1;
+        }
+        *code = *code | (511 & val);
+    } else {
+        conversionerror = 0;
+    }
 
     return 0;
 }
