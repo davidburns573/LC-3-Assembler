@@ -174,6 +174,25 @@ int checkNot(struct line *curline, short *code) {
 }
 
 /**
+ * check if line is a valid JMP instruction
+ * @return 0 if found, -1 if error, -2 if not found
+**/
+int checkJMP(struct line *curline, short *code){
+    char *jmp = JMP;
+    char *f = curline->chars;
+
+    if ((f = checkEqString(jmp, f)) == NULL) return -1;
+    else if ((long) f == -2) return -2;
+
+    int src;
+    if ((f = parseReg(f, &src)) == NULL) return -1;
+
+    *code = (*code) | ((7 & src) << 6) | JMP_B;
+
+    return checkEndOfInstruction(f);
+}
+
+/**
  * check if line is a valid BR instruction
  * @return 0 if found, -1 if error, -2 if not found
 **/
@@ -258,6 +277,9 @@ int testInstructions(struct line *curline, int loc, short *code) {
     
     if (sum == NOT_SUM)
         if ((instr = checkNot(curline, code)) != -2) return instr;
+
+    if (sum == JMP_SUM)
+        if ((instr = checkJMP(curline, code)) != -2) return instr;
 
     if (sum >= BR_SUM && sum <= BRNZP_SUM) 
         if ((instr = checkBr(curline, loc, code)) != -2) return instr;
