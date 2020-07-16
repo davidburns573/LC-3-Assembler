@@ -21,12 +21,15 @@
 #define ADD_B (1 << 12)
 #define AND "AND"
 #define AND_B (5 << 12)
+#define NOT "NOT"
+#define NOT_B ((9 << 12) | (127))
 #define BR "BR"
 #define BR_B (0 << 12)
 
 /***sums***/
 #define ADD_SUM ('A' + 'D' + 'D')
 #define AND_SUM ('A' + 'N' + 'D')
+#define NOT_SUM ('N' + 'O' + 'T')
 #define BR_SUM ('B' + 'R')
 #define BRNZP_SUM ('B' + 'R' + 'N' + 'Z' + 'P')
 

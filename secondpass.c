@@ -62,7 +62,7 @@ char * parseReg(char *f, int *val) {
 
 /**
  * parse 2 registers given a character string
- * A char (bits 0-3 are second reg, 4-7 are first reg), -1 if error
+ * @return updated pointer, NULL if error
 **/
 char * parse2Reg(char *f, int *first, int *second) {
     if ((f = parseReg(f, first)) == NULL) return NULL;
@@ -155,6 +155,25 @@ int checkAddAnd(struct line *curline, short *code, char *instr) {
 }
 
 /**
+ * check if line is a valid NOT instruction
+ * @return 0 if found, -1 if error, -2 if not found
+**/
+int checkNot(struct line *curline, short *code) {
+    char *not = NOT;
+    char *f = curline->chars;
+
+    if ((f = checkEqString(not, f)) == NULL) return -1;
+    else if ((long) f == -2) return -2;
+
+    int dst, src;
+    if ((f = parse2Reg(f, &dst, &src)) == NULL) return -1;
+
+    *code = (*code) | ((7 & dst) << 9) | ((7 & src) << 6) | NOT_B;
+
+    return checkEndOfInstruction(f);
+}
+
+/**
  * check if line is a valid BR instruction
  * @return 0 if found, -1 if error, -2 if not found
 **/
@@ -214,7 +233,7 @@ int checkBr(struct line *curline, int loc, short *code) {
     } else {
         return -1;
     }
-    *code = *code | (511 & val - 1); //-1 because PC points to next instruction
+    *code = *code | (511 & (val - 1)); //-1 because PC points to next instruction
     return checkEndOfInstruction(cf);
 }
 
@@ -225,7 +244,7 @@ int checkBr(struct line *curline, int loc, short *code) {
 int testInstructions(struct line *curline, int loc, short *code) {
     char *f = curline->chars;
     int sum = 0;
-    while (*f != ' ' && *f != '\t' && *f != '\0') {
+    while (*f != ' ' && *f != '\t' && *f != '\0' && *f != ';') {
         sum += TOUPPER(*f);
         f++;
     }
@@ -237,6 +256,9 @@ int testInstructions(struct line *curline, int loc, short *code) {
     if (sum == AND_SUM)
         if ((instr = checkAddAnd(curline, code, AND)) != -2) return instr;
     
+    if (sum == NOT_SUM)
+        if ((instr = checkNot(curline, code)) != -2) return instr;
+
     if (sum >= BR_SUM && sum <= BRNZP_SUM) 
         if ((instr = checkBr(curline, loc, code)) != -2) return instr;
 

@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
     if (secondPass() == -1) return 1;
 
     for (int i = 0; i < lines.size; i++) {
-        printf("%d x%04x\n", i, *(mcode + i));
+        printf("%d x%04hX\n", i, *(mcode + i));
     }
 
     freeLabelTable();
