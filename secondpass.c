@@ -15,6 +15,36 @@ enum br_enum{
 char *nzpArr[7] = {"NZP","NZ","NP","ZP","N","Z","P"};
 const int nzpSize = 7;
 
+/**
+ * Checks if instr is equal to passed in character string
+ * Instruction or label should be first arg
+ * CONVERTS ALL PARAMS TO UPPERCASE (possibly edit later?)
+ * @returns indexed pointer if valid, NULL if error, and -2 if not equal
+**/
+char * checkEqString(char *str, char *f) {
+    while (*str != '\0' && *f != ' ' && *f != '\t' 
+            && *f != '\0' && TOUPPER(*f) == TOUPPER(*str)) {
+        if (TOUPPER(*f) < 'A' || TOUPPER(*f) > 'Z') return NULL;
+        str++; f++;
+    }
+    if (*str != '\0') return (char *) -2;
+    if (*str == '\0' && *f != ' ' && *f != '\t' 
+        && *f != '\0' && *f != ';') return NULL;
+    return f;
+}
+
+/**
+ * check for any trailing invalid characters after instruction
+ * @returns 0 for valid, -1 for invalid
+**/
+int checkEndOfInstruction(char *f) {
+    while (*f != '\0') {
+        if (*f == ';') return 0;
+        if (*f != ' ' && *f != '\t') return -1;
+        f++;
+    }
+    return 0;
+}
 
 /**
  * parse 1 register given a character string
@@ -50,9 +80,8 @@ char * parse2Reg(char *f, int *first, int *second) {
  * parse offset value
  * @returns updated pointer, NULL otherwise
 **/
-char * parseOffset(char *f, int *val) {
+char * parseOffsetVal(char *f, int *val) {
     while (*f == ' ' || *f == '\t') f++;
-
     switch (*f) {
         case '0':
             *val = octalStrToInt(f);
@@ -64,28 +93,27 @@ char * parseOffset(char *f, int *val) {
             *val = decStrToInt(f);
             break;
     }
-
     if (conversionerror) return NULL;
-
     while (*f != '\0' && *f != ' ' && *f != '\t' && *f != ';') f++;
-    
     return f;
 }
 
 /**
- * Checks if instr is equal to passed in character string
- * @returns indexed pointer if valid, NULL if error, and -2 if not equal
+ * parse offset label
+ * @returns updated pointer, NULL otherwise
 **/
-char * checkInstruction(char *instr, char *f) {
-    while (*instr != '\0' && *f != ' ' && *f != '\t' 
-            && *f != '\0' && TOUPPER(*f) == *instr) {
-        if (TOUPPER(*f) < 'A' || TOUPPER(*f) > 'Z') return NULL;
-        instr++; f++;
+char * parseOffsetLabel(char *f, int *val, int loc) {
+    char *cf = f;
+    for (int i = 0; i < labels.size; i++) {
+        if ((cf = checkEqString(labels.plabel[i].name, f)) != (char *) -2
+                                                && cf != NULL) {
+            *val = labels.plabel[i].memlocation - loc;
+            return cf;
+        } else if (cf == NULL) return NULL;
     }
-    if (*instr != '\0') return (char *) -2;
-    if (*instr == '\0' && *f != ' ' && *f != '\t' && *f != '\0') return NULL;
-    return f;
+    return NULL;
 }
+
 
 /**
  * check if line is a valid ADD/AND instruction
@@ -95,7 +123,7 @@ int checkAddAnd(struct line *curline, short *code, char *instr) {
     char *f = curline->chars;
     char *stinstr = instr;
 
-    if ((f = checkInstruction(instr, f)) == NULL) return -1;
+    if ((f = checkEqString(instr, f)) == NULL) return -1;
     else if ((long) f == -2) return -2;
 
     if (*(stinstr+1) == 'D') *code = ADD_B;
@@ -118,18 +146,12 @@ int checkAddAnd(struct line *curline, short *code, char *instr) {
         if ((f = parseReg(f, &val)) == NULL) return -1;
         *code = (*code) | (7 & val);
     } else {
-        if ((f = parseOffset(f, &val)) == NULL) return -1;
+        if ((f = parseOffsetVal(f, &val)) == NULL) return -1;
         if (val < -16 || val > 15) return -1;
         *code = (*code) | (31 & val) | (1 << 5);
     }
 
-    while (*f != '\0') {
-        if (*f == ';') return 0;
-        if (*f != ' ' && *f != '\t') return -1;
-        f++;
-    }
-
-    return 0;
+    return checkEndOfInstruction(f);
 }
 
 /**
@@ -150,7 +172,7 @@ int checkBr(struct line *curline, int loc, short *code) {
 
     char *stf = f;
     for (int i = 0; i < nzpSize && BR_enum == NOTSET; i++) {
-        if ((f = checkInstruction(nzpArr[i], stf)) == (char *) -1) return -1;
+        if ((f = checkEqString(nzpArr[i], stf)) == (char *) -1) return -1;
         else if (f != (char *) -2) BR_enum = i;
     }
     if (f == (char *) -2) return -1;
@@ -174,19 +196,26 @@ int checkBr(struct line *curline, int loc, short *code) {
     if (TOUPPER(*f) > 'Z' || *f < '0' || 
         (TOUPPER(*f) < 'A' && *f > '9') || *f == '#') return -1;
 
+    //what if xFFFF is format of label for some reason?
+    //must check for label first
     int val = 0;
     char *cf = f;
-    if ((cf = parseOffset(f, &val)) != NULL) {
+    printf("before\n");
+    if ((cf = parseOffsetLabel(f, &val, loc)) != NULL) {
+        if (val > 255 || val < -256) {
+            printf("Offset label doesn't fit in 9 bits\n");
+            return -1;
+        }
+    } else if ((cf = parseOffsetVal(f, &val)) != NULL) {
         if (val > 255 || val < -256) {
             printf("Offset value doesn't fit in 9 bits\n");
             return -1;
         }
-        *code = *code | (511 & val);
     } else {
-        conversionerror = 0;
+        return -1;
     }
-
-    return 0;
+    *code = *code | (511 & val - 1); //-1 because PC points to next instruction
+    return checkEndOfInstruction(cf);
 }
 
 /**
@@ -245,7 +274,7 @@ int secondPass(void) {
         }
 
         if (testInstructions(curline, orig + index, code) == -1) {
-            printf("Malformed instruction @x%04x\n", orig + index);
+            printf("Malformed instruction @x%04x : %s\n", orig + index, curline->chars);
             return -1;
         }
 
