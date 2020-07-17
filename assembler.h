@@ -45,6 +45,9 @@
 #define LEA_B (13 << 12)
 #define BR "BR"
 #define BR_B (0 << 12)
+#define RET "RET"
+#define RTI "RTI"
+#define RTI_B (8 << 12)
 
 /***sums***/
 #define ADD_SUM ('A' + 'D' + 'D')
@@ -62,6 +65,8 @@
 #define LEA_SUM ('L' + 'E' + 'A')
 #define BR_SUM ('B' + 'R')
 #define BRNZP_SUM ('B' + 'R' + 'N' + 'Z' + 'P')
+#define RET_SUM ('R' + 'E' + 'T')
+#define RTI_SUM ('R' + 'T' + 'I')
 
 /***structs***/
 struct line {

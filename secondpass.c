@@ -134,7 +134,7 @@ int parseRegOffset9(char *f, short *code, int loc) {
             printf("Offset label doesn't fit in 9 bits\n");
             return -1;
         }
-        val -= 2;
+        val -= 1;
     } else if ((cf = parseOffsetVal(f, &val)) != NULL) {
         if (val > 255 || val < -256) {
             printf("Offset value doesn't fit in 9 bits\n");
@@ -180,7 +180,7 @@ int parse2RegOffset6(char *f, short *code, int loc) {
  * check if line is a valid ADD/AND instruction
  * @return 0 if found, -1 if error, -2 if not found
 **/
-int checkAddAnd(struct line *curline, short *code, char *instr) {
+int checkADDAND(struct line *curline, short *code, char *instr) {
     char *f = curline->chars;
     char *stinstr = instr;
 
@@ -218,7 +218,7 @@ int checkAddAnd(struct line *curline, short *code, char *instr) {
  * check if line is a valid NOT instruction
  * @return 0 if found, -1 if error, -2 if not found
 **/
-int checkNot(struct line *curline, short *code) {
+int checkNOT(struct line *curline, short *code) {
     char *not = NOT;
     char *f = curline->chars;
 
@@ -248,6 +248,38 @@ int checkJMP(struct line *curline, short *code){
     if ((f = parseReg(f, &src)) == NULL) return -1;
 
     *code = (*code) | ((7 & src) << 6) | JMP_B;
+
+    return checkEndOfInstruction(f);
+}
+
+/**
+ * check if line is a valid RET instruction
+ * @return 0 if found, -1 if error, -2 if not found
+**/
+int checkRET(struct line *curline, short *code){
+    char *ret = RET;
+    char *f = curline->chars;
+
+    if ((f = checkEqString(ret, f)) == NULL) return -1;
+    else if ((long) f == -2) return -2;
+
+    *code = (*code) | (7 << 6) | JMP_B;
+
+    return checkEndOfInstruction(f);
+}
+
+/**
+ * check if line is a valid RET instruction
+ * @return 0 if found, -1 if error, -2 if not found
+**/
+int checkRTI(struct line *curline, short *code){
+    char *rti = RTI;
+    char *f = curline->chars;
+
+    if ((f = checkEqString(rti, f)) == NULL) return -1;
+    else if ((long) f == -2) return -2;
+
+    *code = (*code) | RTI_B;
 
     return checkEndOfInstruction(f);
 }
@@ -310,7 +342,7 @@ int checkJSRR(struct line *curline, short *code){
  * check for all load and store instruction variants
  * @return 0 if found, -1 if error, -2 if not found
 **/
-int checkLdSt(int sum, struct line *curline, short *code, int loc) {
+int checkLDST(int sum, struct line *curline, short *code, int loc) {
     char *f = curline->chars;
     char *cf = f;
     switch (sum) {
@@ -330,7 +362,6 @@ int checkLdSt(int sum, struct line *curline, short *code, int loc) {
             if ((cf = checkEqString(LDR, f)) == NULL) return -1;
             else if ((long) cf != -2) {
                 *code = *code | LDR_B;
-                printf("here\n");
                 return parse2RegOffset6(cf, code, loc);
             }
         case ST_SUM:
@@ -365,7 +396,7 @@ int checkLdSt(int sum, struct line *curline, short *code, int loc) {
  * check if line is a valid BR instruction
  * @return 0 if found, -1 if error, -2 if not found
 **/
-int checkBr(struct line *curline, int loc, short *code) {
+int checkBR(struct line *curline, int loc, short *code) {
     char *f = curline->chars;
     char *br = BR;
 
@@ -410,7 +441,7 @@ int checkBr(struct line *curline, int loc, short *code) {
             printf("Offset label doesn't fit in 9 bits\n");
             return -1;
         }
-        val += -2; //-2 because PC points to next instruction
+        val--; //- 1 because PC points to next instruction
     } else if ((cf = parseOffsetVal(f, &val)) != NULL) {
         if (val > 255 || val < -256) {
             printf("Offset value doesn't fit in 9 bits\n");
@@ -434,16 +465,15 @@ int testInstructions(struct line *curline, int loc, short *code) {
         sum += TOUPPER(*f);
         f++;
     }
-
     int instr = 0;
     if (sum == ADD_SUM)
-        if ((instr = checkAddAnd(curline, code, ADD)) != -2) return instr;
+        if ((instr = checkADDAND(curline, code, ADD)) != -2) return instr;
 
     if (sum == AND_SUM)
-        if ((instr = checkAddAnd(curline, code, AND)) != -2) return instr;
+        if ((instr = checkADDAND(curline, code, AND)) != -2) return instr;
 
     if (sum == NOT_SUM)
-        if ((instr = checkNot(curline, code)) != -2) return instr;
+        if ((instr = checkNOT(curline, code)) != -2) return instr;
 
     if (sum == JMP_SUM)
         if ((instr = checkJMP(curline, code)) != -2) return instr;
@@ -453,11 +483,17 @@ int testInstructions(struct line *curline, int loc, short *code) {
 
     if (sum == JSRR_SUM)
         if ((instr = checkJSRR(curline, code)) != -2) return instr;
+
+    if (sum == RET_SUM)
+        if ((instr = checkRET(curline, code)) != -2) return instr;
+
+    if (sum == RTI_SUM)
+        if ((instr = checkRTI(curline, code)) != -2) return instr;
     
-    if ((instr = checkLdSt(sum, curline, code, loc)) != -2) return instr;
+    if ((instr = checkLDST(sum, curline, code, loc)) != -2) return instr;
 
     if (sum >= BR_SUM && sum <= BRNZP_SUM) 
-        if ((instr = checkBr(curline, loc, code)) != -2) return instr;
+        if ((instr = checkBR(curline, loc, code)) != -2) return instr;
 
     return -2;
 }
