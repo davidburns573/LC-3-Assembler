@@ -114,6 +114,35 @@ char * parseOffsetLabel(char *f, int *val, int loc) {
     return NULL;
 }
 
+
+int parseRegOffset9(char *f, short *code, int loc) {
+    int reg;
+    if ((f = parseReg(f, &reg)) == NULL) return -1;
+
+    while (*f == ' ' || *f == '\t') f++;
+
+    int val = 0;
+    char *cf = f;
+    if ((cf = parseOffsetLabel(f, &val, loc)) != NULL) {
+        if (val > 255 || val < -256) {
+            printf("Offset label doesn't fit in 9 bits\n");
+            return -1;
+        }
+        val -= 2;
+    } else if ((cf = parseOffsetVal(f, &val)) != NULL) {
+        if (val > 255 || val < -256) {
+            printf("Offset value doesn't fit in 9 bits\n");
+            return -1;
+        }
+    } else {
+        return -1;
+    }
+
+    *code = (*code) | ((7 & reg) << 9) | (511 & val);
+    
+    return checkEndOfInstruction(f);
+}
+
 /**
  * check if line is a valid ADD/AND instruction
  * @return 0 if found, -1 if error, -2 if not found
@@ -208,20 +237,20 @@ int checkJSR(struct line *curline, short *code, int loc){
     char *cf = f;
     if ((cf = parseOffsetLabel(f, &val, loc)) != NULL) {
         if (val > 1023 || val < -1024) {
-            printf("Offset label doesn't fit in 9 bits\n");
+            printf("Offset label doesn't fit in 11 bits\n");
             return -1;
         }
         val -= 2;
     } else if ((cf = parseOffsetVal(f, &val)) != NULL) {
         if (val > 1023 || val < -1024) {
-            printf("Offset value doesn't fit in 9 bits\n");
+            printf("Offset value doesn't fit in 11 bits\n");
             return -1;
         }
     } else {
         return -1;
     }
 
-    *code = (*code) | (4095 & val) | JSR_B;
+    *code = (*code) | (2047 & val) | JSR_B;
 
     return checkEndOfInstruction(cf);
 }
@@ -243,6 +272,60 @@ int checkJSRR(struct line *curline, short *code){
     *code = (*code) | ((7 & dst) << 6) | JSRR_B;
 
     return checkEndOfInstruction(f);
+}
+
+/**
+ * check for all load and store instruction variants
+ * @return 0 if found, -1 if error, -2 if not found
+**/
+int checkLdSt(int sum, struct line *curline, short *code, int loc) {
+    char *f = curline->chars;
+    char *cf = f;
+    switch (sum) {
+        case LD_SUM: 
+            if ((cf = checkEqString(LD, f)) == NULL) return -1;
+            else if ((long) cf != -2) {
+                *code = *code | LD_B;
+                return parseRegOffset9(cf, code, loc);
+            }
+        case LDI_SUM:
+            if ((cf = checkEqString(LDI, f)) == NULL) return -1;
+            else if ((long) cf != -2) {
+                *code = *code | LDI_B;
+                return parseRegOffset9(cf, code, loc);
+            }
+        case LDR_SUM:
+            if ((cf = checkEqString(LDR, f)) == NULL) return -1;
+            else if ((long) cf != -2) {
+                *code = *code | LDR_B;
+                
+            }
+        case ST_SUM:
+            if ((cf = checkEqString(ST, f)) == NULL) return -1;
+            else if ((long) cf != -2) {
+                *code = *code | ST_B;
+                return parseRegOffset9(cf, code, loc);
+            }
+        case STI_SUM:
+            if ((cf = checkEqString(STI, f)) == NULL) return -1;
+            else if ((long) cf != -2) {
+                *code = *code | STI_B;
+                return parseRegOffset9(cf, code, loc);
+            }
+        case STR_SUM:
+            if ((cf = checkEqString(STR, f)) == NULL) return -1;
+            else if ((long) cf != -2) {
+                *code = *code | STR_B;
+
+            }
+        case LEA_SUM: 
+            if ((cf = checkEqString(LEA, f)) == NULL) return -1;
+            else if ((long) cf != -2) {
+                *code = *code | LEA_B;
+                return parseRegOffset9(cf, code, loc);
+            }
+    }
+    return -2;
 }
 
 /**
@@ -337,6 +420,8 @@ int testInstructions(struct line *curline, int loc, short *code) {
 
     if (sum == JSRR_SUM)
         if ((instr = checkJSRR(curline, code)) != -2) return instr;
+
+    if ((instr = checkLdSt(sum, curline, code, loc)) != -2) return instr;
 
     if (sum >= BR_SUM && sum <= BRNZP_SUM) 
         if ((instr = checkBr(curline, loc, code)) != -2) return instr;

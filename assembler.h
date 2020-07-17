@@ -29,6 +29,20 @@
 #define JSR_B ((4 << 12) | (1 << 11))
 #define JSRR "JSRR"
 #define JSRR_B (4 << 12)
+#define LD "LD"
+#define LD_B (2 << 12)
+#define LDI "LDI"
+#define LDI_B (10 << 12)
+#define LDR "LDR"
+#define LDR_B (6 << 12)
+#define ST "ST"
+#define ST_B (3 << 12)
+#define STI "STI"
+#define STI_B (11 << 12)
+#define STR "STR"
+#define STR_B (7 << 12)
+#define LEA "LEA"
+#define LEA_B (13 << 12)
 #define BR "BR"
 #define BR_B (0 << 12)
 
@@ -39,6 +53,13 @@
 #define JMP_SUM ('J' + 'M' + 'P')
 #define JSR_SUM ('J' + 'S' + 'R')
 #define JSRR_SUM ('J' + 'S' + 'R' + 'R')
+#define LD_SUM ('L' + 'D')
+#define LDI_SUM ('L' + 'D' + 'I')
+#define LDR_SUM ('L' + 'D' + 'R')
+#define ST_SUM ('S' + 'T')
+#define STI_SUM ('S' + 'T' + 'I')
+#define STR_SUM ('S' + 'T' + 'R')
+#define LEA_SUM ('L' + 'E' + 'A')
 #define BR_SUM ('B' + 'R')
 #define BRNZP_SUM ('B' + 'R' + 'N' + 'Z' + 'P')
 
