@@ -114,7 +114,6 @@ char * parseOffsetLabel(char *f, int *val, int loc) {
     return NULL;
 }
 
-
 /**
  * check if line is a valid ADD/AND instruction
  * @return 0 if found, -1 if error, -2 if not found
@@ -193,6 +192,41 @@ int checkJMP(struct line *curline, short *code){
 }
 
 /**
+ * check if line is a valid JSR instruction
+ * @return 0 if found, -1 if error, -2 if not found
+**/
+int checkJSR(struct line *curline, short *code, int loc){
+    char *jsr = JSR;
+    char *f = curline->chars;
+
+    if ((f = checkEqString(jsr, f)) == NULL) return -1;
+    else if ((long) f == -2) return -2;
+
+    while (*f == ' ' || *f == '\t') f++;
+
+    int val = 0;
+    char *cf = f;
+    if ((cf = parseOffsetLabel(f, &val, loc)) != NULL) {
+        if (val > 1023 || val < -1024) {
+            printf("Offset label doesn't fit in 9 bits\n");
+            return -1;
+        }
+        val -= 2;
+    } else if ((cf = parseOffsetVal(f, &val)) != NULL) {
+        if (val > 1023 || val < -1024) {
+            printf("Offset value doesn't fit in 9 bits\n");
+            return -1;
+        }
+    } else {
+        return -1;
+    }
+
+    *code = (*code) | (4095 & val) | JSR_B;
+
+    return checkEndOfInstruction(cf);
+}
+
+/**
  * check if line is a valid BR instruction
  * @return 0 if found, -1 if error, -2 if not found
 **/
@@ -231,19 +265,17 @@ int checkBr(struct line *curline, int loc, short *code) {
     *code = *code | (n << 11) | (z << 10) | (p << 9) | BR_B;
 
     while (*f == ' ' || *f == '\t') f++;
-    if (TOUPPER(*f) > 'Z' || *f < '0' || 
-        (TOUPPER(*f) < 'A' && *f > '9') || *f == '#') return -1;
 
     //what if xFFFF is format of label for some reason?
     //must check for label first
     int val = 0;
     char *cf = f;
-    printf("before\n");
     if ((cf = parseOffsetLabel(f, &val, loc)) != NULL) {
         if (val > 255 || val < -256) {
             printf("Offset label doesn't fit in 9 bits\n");
             return -1;
         }
+        val += -2; //-2 because PC points to next instruction
     } else if ((cf = parseOffsetVal(f, &val)) != NULL) {
         if (val > 255 || val < -256) {
             printf("Offset value doesn't fit in 9 bits\n");
@@ -252,7 +284,7 @@ int checkBr(struct line *curline, int loc, short *code) {
     } else {
         return -1;
     }
-    *code = *code | (511 & (val - 1)); //-1 because PC points to next instruction
+    *code = *code | (511 & val);
     return checkEndOfInstruction(cf);
 }
 
@@ -281,6 +313,9 @@ int testInstructions(struct line *curline, int loc, short *code) {
     if (sum == JMP_SUM)
         if ((instr = checkJMP(curline, code)) != -2) return instr;
 
+    if (sum == JSR_SUM)
+        if ((instr = checkJSR(curline, code, loc)) != -2) return instr;
+
     if (sum >= BR_SUM && sum <= BRNZP_SUM) 
         if ((instr = checkBr(curline, loc, code)) != -2) return instr;
 
@@ -301,7 +336,7 @@ int secondPass(void) {
         printf("missing or malformed initial .orig\n");
     }
     *code = (short) orig;
-    printf("BLOCK %x\n", *code);
+    printf("CODEBLOCK %x\n", *code);
 
     int i = 1;
     curline++; code++;

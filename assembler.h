@@ -25,6 +25,10 @@
 #define NOT_B ((9 << 12) | (127))
 #define JMP "JMP"
 #define JMP_B (12 << 12)
+#define JSR "JSR"
+#define JSR_B ((4 << 12) | (1 << 11))
+#define JSRR "JSRR"
+#define JSRR_B (4 << 12)
 #define BR "BR"
 #define BR_B (0 << 12)
 
@@ -33,6 +37,8 @@
 #define AND_SUM ('A' + 'N' + 'D')
 #define NOT_SUM ('N' + 'O' + 'T')
 #define JMP_SUM ('J' + 'M' + 'P')
+#define JSR_SUM ('J' + 'S' + 'R')
+#define JSRR_SUM ('J' + 'S' + 'R' + 'R')
 #define BR_SUM ('B' + 'R')
 #define BRNZP_SUM ('B' + 'R' + 'N' + 'Z' + 'P')
 
