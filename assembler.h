@@ -48,6 +48,8 @@
 #define RET "RET"
 #define RTI "RTI"
 #define RTI_B (8 << 12)
+#define TRAP "TRAP"
+#define TRAP_B (15 << 12)
 
 /***sums***/
 #define ADD_SUM ('A' + 'D' + 'D')
@@ -67,6 +69,7 @@
 #define BRNZP_SUM ('B' + 'R' + 'N' + 'Z' + 'P')
 #define RET_SUM ('R' + 'E' + 'T')
 #define RTI_SUM ('R' + 'T' + 'I')
+#define TRAP_SUM ('T' + 'R' + 'A' + 'P')
 
 /***structs***/
 struct line {

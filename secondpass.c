@@ -304,15 +304,13 @@ int checkJSR(struct line *curline, short *code, int loc){
             printf("Offset label doesn't fit in 11 bits\n");
             return -1;
         }
-        val -= 2;
+        val--;
     } else if ((cf = parseOffsetVal(f, &val)) != NULL) {
         if (val > 1023 || val < -1024) {
             printf("Offset value doesn't fit in 11 bits\n");
             return -1;
         }
-    } else {
-        return -1;
-    }
+    } else return -1;
 
     *code = (*code) | (2047 & val) | JSR_B;
 
@@ -334,6 +332,30 @@ int checkJSRR(struct line *curline, short *code){
     if ((f = parseReg(f, &dst)) == NULL) return -1;
 
     *code = (*code) | ((7 & dst) << 6) | JSRR_B;
+
+    return checkEndOfInstruction(f);
+}
+
+/**
+ * check if line is a valid TRAP instruction
+ * @return 0 if found, -1 if error, -2 if not found
+**/
+int checkTRAP(struct line *curline, short *code){
+    char *trap = TRAP;
+    char *f = curline->chars;
+
+    if ((f = checkEqString(trap, f)) == NULL) return -1;
+    else if ((long) f == -2) return -2;
+
+    int val;
+    if ((f = parseOffsetVal(f, &val)) != NULL) {
+        if (val > 0x25 || val < 0x20) {
+            printf("Not a valid trapvector value\n");
+            return -1;
+        }
+    } else return -1;
+
+    *code = (*code) | (511 & val) | TRAP_B;
 
     return checkEndOfInstruction(f);
 }
@@ -489,6 +511,9 @@ int testInstructions(struct line *curline, int loc, short *code) {
     if (sum == RTI_SUM)
         if ((instr = checkRTI(curline, code)) != -2) return instr;
     
+    if (sum == TRAP_SUM)
+        if ((instr = checkTRAP(curline, code)) != -2) return instr;
+
     if ((instr = checkLDST(sum, curline, code, loc)) != -2) return instr;
 
     if (sum >= BR_SUM && sum <= BRNZP_SUM) 
