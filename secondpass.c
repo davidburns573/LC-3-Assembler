@@ -227,6 +227,25 @@ int checkJSR(struct line *curline, short *code, int loc){
 }
 
 /**
+ * check if line is a valid JSR instruction
+ * @return 0 if found, -1 if error, -2 if not found
+**/
+int checkJSRR(struct line *curline, short *code){
+    char *jsrr = JSRR;
+    char *f = curline->chars;
+
+    if ((f = checkEqString(jsrr, f)) == NULL) return -1;
+    else if ((long) f == -2) return -2;
+
+    int dst;
+    if ((f = parseReg(f, &dst)) == NULL) return -1;
+
+    *code = (*code) | ((7 & dst) << 6) | JSRR_B;
+
+    return checkEndOfInstruction(f);
+}
+
+/**
  * check if line is a valid BR instruction
  * @return 0 if found, -1 if error, -2 if not found
 **/
@@ -316,6 +335,9 @@ int testInstructions(struct line *curline, int loc, short *code) {
     if (sum == JSR_SUM)
         if ((instr = checkJSR(curline, code, loc)) != -2) return instr;
 
+    if (sum == JSRR_SUM)
+        if ((instr = checkJSRR(curline, code)) != -2) return instr;
+
     if (sum >= BR_SUM && sum <= BRNZP_SUM) 
         if ((instr = checkBr(curline, loc, code)) != -2) return instr;
 
@@ -356,6 +378,8 @@ int secondPass(void) {
             printf("Malformed instruction @x%04x : %s\n", orig + index, curline->chars);
             return -1;
         }
+
+        printf("%d x%04hX\n", index, *code);
 
         index++; i++; code++; curline++;
     }

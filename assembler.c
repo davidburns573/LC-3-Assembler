@@ -199,18 +199,20 @@ int main(int argc, char *argv[]) {
     if (firstPass() == -1) return 1;
 
     for (int i = 0; i < labels.size; i++) {
-        printf("loc: %X name: %s\n", (labels.plabel + i)->memlocation,(labels.plabel + i)->name);
+        printf("loc: x%X name: %s\n", (labels.plabel + i)->memlocation,(labels.plabel + i)->name);
     }
 
-    for (int i = 0; i < lines.size; i++) {
-        printf("%d %s\n", i, (lines.plines + i)->chars);
-    }
+    // for (int i = 0; i < lines.size; i++) {
+    //     printf("%d %s\n", i, (lines.plines + i)->chars);
+    // }
+
+    printf("\n-------------------\n\n");
 
     if (secondPass() == -1) return 1;
 
-    for (int i = 0; i < lines.size; i++) {
-        printf("%d x%04hX\n", i, *(mcode + i));
-    }
+    // for (int i = 0; i < lines.size; i++) {
+    //     printf("%d x%04hX\n", i, *(mcode + i));
+    // }
 
     freeLabelTable();
     return 0;
