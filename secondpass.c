@@ -151,7 +151,7 @@ int parseRegOffset9(char *f, short *code, int loc) {
  * parse 2 reg with 6 bit offset
  * @return -1 if error, 0 if success
 **/
-int parse2RegOffset6(char *f, short *code, int loc) {
+int parse2RegOffset6(char *f, short *code) {
     int reg1;
     int reg2;
     if ((f = parse2Reg(f, &reg1, &reg2)) == NULL) return -1;
@@ -345,49 +345,48 @@ int checkJSRR(struct line *curline, short *code){
 int checkLDST(int sum, struct line *curline, short *code, int loc) {
     char *f = curline->chars;
     char *cf = f;
-    switch (sum) {
-        case LD_SUM: 
-            if ((cf = checkEqString(LD, f)) == NULL) return -1;
-            else if ((long) cf != -2) {
-                *code = *code | LD_B;
-                return parseRegOffset9(cf, code, loc);
-            }
-        case LDI_SUM:
-            if ((cf = checkEqString(LDI, f)) == NULL) return -1;
-            else if ((long) cf != -2) {
-                *code = *code | LDI_B;
-                return parseRegOffset9(cf, code, loc);
-            }
-        case LDR_SUM:
-            if ((cf = checkEqString(LDR, f)) == NULL) return -1;
-            else if ((long) cf != -2) {
-                *code = *code | LDR_B;
-                return parse2RegOffset6(cf, code, loc);
-            }
-        case ST_SUM:
-            if ((cf = checkEqString(ST, f)) == NULL) return -1;
-            else if ((long) cf != -2) {
-                *code = *code | ST_B;
-                return parseRegOffset9(cf, code, loc);
-            }
-        case STI_SUM:
-            if ((cf = checkEqString(STI, f)) == NULL) return -1;
-            else if ((long) cf != -2) {
-                *code = *code | STI_B;
-                return parseRegOffset9(cf, code, loc);
-            }
-        case STR_SUM:
-            if ((cf = checkEqString(STR, f)) == NULL) return -1;
-            else if ((long) cf != -2) {
-                *code = *code | STR_B;
-                return parse2RegOffset6(cf, code, loc);
-            }
-        case LEA_SUM: 
-            if ((cf = checkEqString(LEA, f)) == NULL) return -1;
-            else if ((long) cf != -2) {
-                *code = *code | LEA_B;
-                return parseRegOffset9(cf, code, loc);
-            }
+    if (sum == LD_SUM) {
+        if ((cf = checkEqString(LD, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | LD_B;
+            return parseRegOffset9(cf, code, loc);
+        }
+    } if (sum == LDI_SUM) {
+        if ((cf = checkEqString(LDI, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | LDI_B;
+            return parseRegOffset9(cf, code, loc);
+        }
+    } if (sum == LDR_SUM) {
+        if ((cf = checkEqString(LDR, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | LDR_B;
+            return parse2RegOffset6(cf, code);
+        }
+    } if (sum == ST_SUM) {
+        if ((cf = checkEqString(ST, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | ST_B;
+            return parseRegOffset9(cf, code, loc);
+        }
+    } if (sum == STI_SUM) {
+        if ((cf = checkEqString(STI, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | STI_B;
+            return parseRegOffset9(cf, code, loc);
+        }
+    } if (sum == STR_SUM) {
+        if ((cf = checkEqString(STR, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | STR_B;
+            return parse2RegOffset6(cf, code);
+        }
+    } if (sum == LEA_SUM) {
+        if ((cf = checkEqString(LEA, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | LEA_B;
+            return parseRegOffset9(cf, code, loc);
+        }
     }
     return -2;
 }
