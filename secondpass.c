@@ -114,11 +114,17 @@ char * parseOffsetLabel(char *f, int *val, int loc) {
     return NULL;
 }
 
-
+/**
+ * parse one reg with 9 bit offset
+ * @return -1 if error, 0 if success
+**/
 int parseRegOffset9(char *f, short *code, int loc) {
     int reg;
     if ((f = parseReg(f, &reg)) == NULL) return -1;
 
+    while (*f == ' ' || *f == '\t') f++;
+    if (*f != ',') return -1;
+    f++;
     while (*f == ' ' || *f == '\t') f++;
 
     int val = 0;
@@ -134,13 +140,40 @@ int parseRegOffset9(char *f, short *code, int loc) {
             printf("Offset value doesn't fit in 9 bits\n");
             return -1;
         }
-    } else {
-        return -1;
-    }
+    } else return -1;
 
     *code = (*code) | ((7 & reg) << 9) | (511 & val);
     
-    return checkEndOfInstruction(f);
+    return checkEndOfInstruction(cf);
+}
+
+/**
+ * parse 2 reg with 6 bit offset
+ * @return -1 if error, 0 if success
+**/
+int parse2RegOffset6(char *f, short *code, int loc) {
+    int reg1;
+    int reg2;
+    if ((f = parse2Reg(f, &reg1, &reg2)) == NULL) return -1;
+
+    while (*f == ' ' || *f == '\t') f++;
+    if (*f != ',') return -1;
+    f++;
+    while (*f == ' ' || *f == '\t') f++;
+
+    int val = 0;
+    char *cf = f;
+
+    if ((cf = parseOffsetVal(f, &val)) != NULL) {
+        if (val > 31 || val < -32) {
+            printf("Offset value doesn't fit in 6 bits\n");
+            return -1;
+        }
+    } else return -1;
+
+    *code = (*code) | ((7 & reg1) << 9) | ((7 & reg2) << 6) | (63 & val);
+    
+    return checkEndOfInstruction(cf);
 }
 
 /**
@@ -165,7 +198,6 @@ int checkAddAnd(struct line *curline, short *code, char *instr) {
     
     while (*f == ' ' || *f == '\t') f++;
     if (*f != ',') return -1;
-
     f++;
     while (*f == ' ' || *f == '\t') f++;
 
@@ -298,7 +330,8 @@ int checkLdSt(int sum, struct line *curline, short *code, int loc) {
             if ((cf = checkEqString(LDR, f)) == NULL) return -1;
             else if ((long) cf != -2) {
                 *code = *code | LDR_B;
-                
+                printf("here\n");
+                return parse2RegOffset6(cf, code, loc);
             }
         case ST_SUM:
             if ((cf = checkEqString(ST, f)) == NULL) return -1;
@@ -316,7 +349,7 @@ int checkLdSt(int sum, struct line *curline, short *code, int loc) {
             if ((cf = checkEqString(STR, f)) == NULL) return -1;
             else if ((long) cf != -2) {
                 *code = *code | STR_B;
-
+                return parse2RegOffset6(cf, code, loc);
             }
         case LEA_SUM: 
             if ((cf = checkEqString(LEA, f)) == NULL) return -1;
@@ -408,7 +441,7 @@ int testInstructions(struct line *curline, int loc, short *code) {
 
     if (sum == AND_SUM)
         if ((instr = checkAddAnd(curline, code, AND)) != -2) return instr;
-    
+
     if (sum == NOT_SUM)
         if ((instr = checkNot(curline, code)) != -2) return instr;
 
@@ -420,7 +453,7 @@ int testInstructions(struct line *curline, int loc, short *code) {
 
     if (sum == JSRR_SUM)
         if ((instr = checkJSRR(curline, code)) != -2) return instr;
-
+    
     if ((instr = checkLdSt(sum, curline, code, loc)) != -2) return instr;
 
     if (sum >= BR_SUM && sum <= BRNZP_SUM) 
