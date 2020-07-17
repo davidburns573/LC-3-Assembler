@@ -100,19 +100,23 @@ int checkEnd(struct line *curline) {
 int checkForLabel(char *f) {
     char *p = f;
     while (*p != '\0' && *p != ' ' && *p != '\t') { //checks first word, only letters
-        if (TOUPPER(*p) < 'A' || TOUPPER(*p) > 'Z') return 0;
+        if ((TOUPPER(*p) < 'A' || TOUPPER(*p) > 'Z') && *p != '_') return 0;
         p++;
     }
     for (int i = 0; i < INSTRSIZE; i++) {
         char *instr = (char *) INSTRUCTIONS[i];
         char *x = f;
         while (*instr != '\0' && (*instr == TOUPPER(*x))) {
-            if ((*x & ~(1 << 5)) < 'A' || TOUPPER(*x) > 'Z') return 0; //remove PSEUDO-OPs
+            if ((TOUPPER(*x) < 'A' || TOUPPER(*x) > 'Z') && *x != '_') return 0; //remove PSEUDO-OPs
             instr++; x++;
         }
-        if (*instr == '\0' && (*x == ' ' || *x == '\t' || *x == '\0')) return 0; //return 0 for not label
+        if (*instr == '\0' && 
+            (*x == ' ' || *x == '\t' || *x == '\0' || *x == ';')) return 0; //return 0 for not label
         char up = TOUPPER(*f);
-        if (up > 'A' && up < 'Z' && up < *INSTRUCTIONS[i]) return 1; //return 1 for label
+        if (up >= 'A' && up <= 'Z') {
+            if (up == '_') return 1;
+            else if (up < *INSTRUCTIONS[i]) return 1;
+        }
     }
     return 1;
 }

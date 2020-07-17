@@ -361,6 +361,53 @@ int checkTRAP(struct line *curline, short *code){
 }
 
 /**
+ * check if line is a TRAP Alias instruction
+ * @return 0 if found, -1 if error, -2 if not found
+**/
+int checkTRAPAlias(int sum, struct line *curline, short *code) {
+    char *f = curline->chars;
+    char *cf = f;
+    if (sum == GETC_SUM) {
+        if ((cf = checkEqString(GETC, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | TRAP_B | GETC_V;
+            return checkEndOfInstruction(cf);
+        }
+    } if (sum == OUT_SUM) {
+        if ((cf = checkEqString(OUT, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | TRAP_B | OUT_V;
+            return checkEndOfInstruction(cf);
+        }
+    } if (sum == PUTS_SUM) {
+        if ((cf = checkEqString(PUTS, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | TRAP_B | PUTS_V;
+            return checkEndOfInstruction(cf);
+        }
+    } if (sum == IN_SUM) {
+        if ((cf = checkEqString(IN, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | TRAP_B | IN_V;
+            return checkEndOfInstruction(cf);
+        }
+    } if (sum == PUTSP_SUM) {
+        if ((cf = checkEqString(PUTSP, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | TRAP_B | PUTSP_V;
+            return checkEndOfInstruction(cf);
+        }
+    } if (sum == HALT_SUM) {
+        if ((cf = checkEqString(HALT, f)) == NULL) return -1;
+        else if ((long) cf != -2) {
+            *code = *code | TRAP_B | HALT_V;
+            return checkEndOfInstruction(cf);
+        }
+    }
+    return -2;
+}
+
+/**
  * check for all load and store instruction variants
  * @return 0 if found, -1 if error, -2 if not found
 **/
@@ -514,12 +561,14 @@ int testInstructions(struct line *curline, int loc, short *code) {
     if (sum == TRAP_SUM)
         if ((instr = checkTRAP(curline, code)) != -2) return instr;
 
+    if ((instr = checkTRAPAlias(sum, curline, code)) != -2) return instr;
+
     if ((instr = checkLDST(sum, curline, code, loc)) != -2) return instr;
 
     if (sum >= BR_SUM && sum <= BRNZP_SUM) 
         if ((instr = checkBR(curline, loc, code)) != -2) return instr;
 
-    return -2;
+    return -1;
 }
 
 /**
@@ -552,7 +601,10 @@ int secondPass(void) {
             continue;
         }
 
-        if (testInstructions(curline, orig + index, code) == -1) {
+        if (*(curline->chars) == '$') {
+            *code = (short) hexStrToInt(curline->chars);
+            if (conversionerror) return -1;
+        } else if (testInstructions(curline, orig + index, code) == -1) {
             printf("Malformed instruction @x%04x : %s\n", orig + index, curline->chars);
             return -1;
         }

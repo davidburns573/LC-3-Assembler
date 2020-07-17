@@ -4,7 +4,7 @@
 const char *INSTRUCTIONS[] = {"ADD","AND","BR","BRN","BRP","BRZ",
                               "BRNZ","BRNP","BRZP","BRNZP","GETC","HALT",
                               "IN","JMP","JSR","JSRR","LD","LDI",
-                              "LDR","LEA","NOT","OUT","PUTS","RET",
+                              "LDR","LEA","NOT","OUT","PUTS","PUTSP","RET",
                               "RTI","ST","STI","STR","TRAP"};
 FILE *fptr;
 struct totlines lines = {0, NULL};

@@ -14,7 +14,7 @@
 #define STRINGZ ".stringz"
 #define BLKW ".blkw"
 #define FILL ".fill"
-#define INSTRSIZE 29
+#define INSTRSIZE 30
 
 /***instructions***/
 #define ADD "ADD"
@@ -51,6 +51,20 @@
 #define TRAP "TRAP"
 #define TRAP_B (15 << 12)
 
+/***traps***/
+#define GETC "GETC"
+#define GETC_V (0x20)
+#define OUT "OUT"
+#define OUT_V (0x21)
+#define PUTS "PUTS"
+#define PUTS_V (0x22)
+#define IN "IN"
+#define IN_V (0x23)
+#define PUTSP "PUTSP"
+#define PUTSP_V (0x24)
+#define HALT "HALT"
+#define HALT_V (0x25)
+
 /***sums***/
 #define ADD_SUM ('A' + 'D' + 'D')
 #define AND_SUM ('A' + 'N' + 'D')
@@ -70,6 +84,12 @@
 #define RET_SUM ('R' + 'E' + 'T')
 #define RTI_SUM ('R' + 'T' + 'I')
 #define TRAP_SUM ('T' + 'R' + 'A' + 'P')
+#define GETC_SUM ('G' + 'E' + 'T' + 'C')
+#define OUT_SUM ('O' + 'U' + 'T')
+#define PUTS_SUM ('P' + 'U' + 'T' + 'S')
+#define IN_SUM ('I' + 'N')
+#define PUTSP_SUM ('P' + 'U' + 'T' + 'S' + 'P')
+#define HALT_SUM ('H' + 'A' + 'L' + 'T')
 
 /***structs***/
 struct line {
